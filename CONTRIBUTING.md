@@ -31,7 +31,7 @@ This project is about creating a free, effective tool for learning and preparing
 
 ## How to Contribute
 
-1. **Contact admin for inclusion into the Azure DevOps Project & Repo**:
+1. **Contact admin for any big and disruptive ideas you'd like to discuss before implementation, architecture-wise**:
 
 Send e-mail to _Flores, Vinicio <vfloreshdz@gmail.com>_
 
