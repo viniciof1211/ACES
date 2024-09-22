@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background Circle -->
+  <circle cx="100" cy="100" r="95" fill="#0078D4" stroke="#005A9E" stroke-width="10"/>
+  
+  <!-- Azure Symbol -->
+  <polygon points="60,120 100,40 140,120" fill="white"/>
+  <polygon points="95,105 105,105 115,130 85,130" fill="#0078D4"/>
+
+  <!-- Certification Badge -->
+  <rect x="55" y="130" width="90" height="30" rx="8" fill="white" stroke="#005A9E" stroke-width="2"/>
+  <text x="100" y="150" font-family="Arial, sans-serif" font-size="12" fill="#0078D4" text-anchor="middle" font-weight="bold">
+    CERTIFIED
+  </text>
+
+  <!-- Progress Indicator Icon (Circle with check) -->
+  <circle cx="170" cy="170" r="15" fill="white" stroke="#0078D4" stroke-width="2"/>
+  <polyline points="164,170 170,176 178,164" fill="none" stroke="#0078D4" stroke-width="2"/>
+
+  <!-- Text for App Name (Bold Italic Dark Blue) -->
+  <text x="100" y="190" font-family="Arial, sans-serif" font-size="10" fill="#003366" text-anchor="middle" font-weight="bold" font-style="italic">
+    Azure DIS/ETC Cert 
+    Practice Simulator
+  </text>
+</svg>
