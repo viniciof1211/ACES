@@ -63,18 +63,18 @@ This simulator covers **all major Azure certifications**, including:
 4. **Clone this repository to your local machine:**
     
     ```bash
-    git clone https://github.com/yourusername/azure-certification-simulator.git
+    git clone https://github.com/viniciof1211/ACES.git
     ```
 5. **Navigate to the project directory:**
     
     ```
     bash
-    cd azure_certification_simulator
+    cd ACES
     ```
 6. **Run the Python script:**
 
     ```bash
-      python3.6 azure_certification_simulator.py
+      python3.6 main-azure-certs-exam-simulator.py
     ```
 
 ### Usage
