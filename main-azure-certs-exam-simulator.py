@@ -1,7 +1,7 @@
-﻿# Written by Vinicio S. Flores <v-viniciof@microsoft.com>
+﻿# Written by Vinicio S. Flores <vfloreshdz@gmail.com>
 # Modified to include certification menu selection
 # Modified to handle semicolon-delimited CSV files
-# Copyright & under Software IP rights (intellectual-property)
+# MIT-Licensed
 
 import random
 import os
