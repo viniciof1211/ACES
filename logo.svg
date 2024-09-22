@@ -18,7 +18,6 @@
 
   <!-- Text for App Name (Bold Italic Dark Blue) -->
   <text x="100" y="190" font-family="Arial, sans-serif" font-size="10" fill="#003366" text-anchor="middle" font-weight="bold" font-style="italic">
-    Azure DIS/ETC Cert 
-    Practice Simulator
+    ACES
   </text>
 </svg>
