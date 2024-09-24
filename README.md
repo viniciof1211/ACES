@@ -88,7 +88,7 @@ This tool is designed to empower users in certification preparation. Developed b
 
 Below is the architecture diagram for the **Azure Certification Exam Simulator (ACES)**. This diagram provides an overview of the key components, including the user interface, Exam Simulator logic, SuperMemo-2 algorithm, weighted random selection, and difficult question review process, all integrated and hosted on Microsoft Azure.
 
-![ACES Architecture Diagram](./Achitecture.png)
+![ACES Architecture Diagram](./Architecture.png)
 
 ### Key Components:
 - **User Interface**: The frontend where users interact with the simulator.
