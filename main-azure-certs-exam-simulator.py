@@ -1,7 +1,7 @@
-﻿# Written by Vinicio S. Flores <vfloreshdz@gmail.com>
+﻿# Written by Vinicio S. Flores <v-viniciof@microsoft.com>
 # Modified to include certification menu selection
 # Modified to handle semicolon-delimited CSV files
-# MIT-Licensed
+# Copyright & under Software IP rights (intellectual-property)
 
 import random
 import os
@@ -19,6 +19,8 @@ from nltk.tokenize import word_tokenize
 from concurrent.futures import ThreadPoolExecutor
 import time
 import spacy
+
+print("[DEBUG] Loading initial and background modules ... Please wait ....")
 
 # Load the English language model
 nlp = spacy.load("en_core_web_sm")
@@ -344,8 +346,9 @@ class ExamSimulator:
             
             if user_answer == 'Q':
                 print(self.renderer.WARNING + self.translator.translate("Exiting and aborting exam test ... See You Later!!") + self.renderer.ENDC)
+                print(f"{self.renderer.WARNING}Printing score up to this point until the exam was aborted: ")
+                self.show_results()
                 quit()
-
             if user_answer == question.correct_answer:
                 print(self.renderer.OKGREEN + self.translator.translate("\nCorrect!") + self.renderer.ENDC)
                 self.score += 1
@@ -474,13 +477,31 @@ def main():
         sys.exit(1)
 
     try:
-        simulator = ExamSimulator(questions_input_file, renderer, langs)
+        end_it = False 
+
+        while end_it == False:
+            simulator = ExamSimulator(questions_input_file, renderer, langs)
         
-        print(f"{simulator.renderer.HEADER}" + langs.translate(f"Welcome to the {cert_name} Exam Simulator! -Copyright Vinicio S. Flores <v.flores.hernandez@accenture.com>") + f"{simulator.renderer.ENDC}")
-        input(f"{simulator.renderer.BOLD}" + langs.translate(f"Press Enter to start the exam...") + f"{simulator.renderer.ENDC}")
+            print(f"{simulator.renderer.HEADER}" + langs.translate(f"Welcome to the {cert_name} Exam Simulator! -Copyright Vinicio S. Flores <v.flores.hernandez@accenture.com>") + f"{simulator.renderer.ENDC}")
+            input(f"{simulator.renderer.BOLD}" + langs.translate(f"Press Enter to start the exam...") + f"{simulator.renderer.ENDC}")
         
-        simulator.run_exam()
-        simulator.show_results()
+            simulator.run_exam()
+            simulator.show_results()
+
+            continue_input = 'X'
+
+            while continue_input not in ['Y','N']:
+                continue_input = input(f"{simulator.renderer.BOLD}Wanna try again another or same certification exam? (y/N) {simulator.renderer.ENDC}")
+                continue_input = continue_input.strip().upper();
+
+                if(continue_input == 'Y'):
+                    end_it = False
+                elif (continue_input == 'N'):
+                    end_it = True
+                    break;
+                else:
+                    print("Invalid answer, answer 'Y' or 'N'")
+
     except Exception as e:
         print(f"{renderer.FAIL}An error occurred: {e}{renderer.ENDC}")
         print("Please try again. If the problem persists, check your internet connection and make sure you have the necessary permissions to download NLTK data.")
