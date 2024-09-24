@@ -84,6 +84,23 @@ Follow the on-screen prompts to select the certification you wish to practice. A
 This tool is designed to empower users in certification preparation. Developed by engineers, for engineers, this simulator aims to provide effective self-paced learning and is a no-cost initiative.
 
 ---
+## Architecture Diagram
+
+Below is the architecture diagram for the **Azure Certification Exam Simulator (ACES)**. This diagram provides an overview of the key components, including the user interface, Exam Simulator logic, SuperMemo-2 algorithm, weighted random selection, and difficult question review process, all integrated and hosted on Microsoft Azure.
+
+![ACES Architecture Diagram](./Achitecture.png)
+
+### Key Components:
+- **User Interface**: The frontend where users interact with the simulator.
+- **Exam Simulator Logic**: Core functionality that manages the question flow, scoring, and feedback mechanism.
+- **SuperMemo-2 Algorithm**: A spaced repetition algorithm designed to enhance long-term retention by adjusting the frequency of question reviews.
+- **Weighted Random Selection**: Questions are selected based on their weight, focusing on areas where users struggle the most.
+- **Difficult Question Review**: Incorrectly answered questions are revisited to ensure mastery.
+- **Azure Cloud Integration**: Leveraging the power of the cloud for scalability, storage, and analytics.
+  
+This architecture ensures efficient delivery and processing of exam simulations, optimized for the best learning experience.
+
+---
 ## TO-DOs
 
 To enhance the effectiveness of the **Azure Certification Practice Simulator**, the following improvements will be implemented to better integrate spaced repetition techniques and user-focused review sessions. These features aim to optimize long-term retention and provide users with a targeted review of difficult questions.
