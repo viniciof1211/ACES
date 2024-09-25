@@ -28,6 +28,35 @@ This simulator covers **all major Azure certifications**, including:
 - **AZ-700**: Designing and Implementing Microsoft Azure Networking Solutions
 
 ---
+## Recent Enhancements 🌟
+
+We are constantly improving the **Azure Certification Practice Simulator** to offer the best possible preparation experience for our users. Below are the exciting new features from our latest update:
+
+- **Language Selection**: You can now choose to take the exam in English, Spanish, Portuguese, French, or Japanese, making the simulator accessible to a broader audience across different regions.
+  
+- **Test Selection and Simulated Exams**: The system now offers an intuitive menu for selecting the Azure certification exam you wish to practice, ranging from **AZ-900 to advanced levels like AZ-305** and more.
+
+- **Accurate Answer Validation**: We've added robust validation logic to ensure that you receive immediate and precise feedback on each question. Additionally, detailed explanations are provided to help you deepen your understanding of the topics.
+
+- **Final Scoring with Visual Feedback**: After completing a practice session, the simulator now calculates your **total score** and presents it in a clear, easy-to-understand format. Additionally, we've introduced a **visual ASCII-based bar chart** to provide an engaging representation of your performance. Here’s an example of how it looks:
+
+    ```plaintext
+    Exam completed! Your score (Microsoft Notation - Max Score is 1000, Passing Score is 700): 22/24 (916.67%)
+    Congratulations! You have passed the exam.
+
+Score breakdown by category:
+
+        Describe cloud concepts                  : ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 0.00
+
+        Describe Azure architecture and services : ███████████████████████████████████████▒▒▒▒▒▒▒▒▒▒▒ 791.67
+
+        Describe Azure management and governance : ██████▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 125.00
+
+    ```
+
+These updates further enhance the realism of the exam simulation and offer more insightful feedback, allowing you to track your progress and focus on areas for improvement.
+
+---
 
 ## Getting Started 🚀
 
