@@ -1,15 +1,22 @@
-﻿# Written by Vinicio S. Flores <v-viniciof@microsoft.com>
+﻿# Written by Vinicio S. Flores <v.flores.hernandez@accenture.com>
 # Modified to include certification menu selection
 # Modified to handle semicolon-delimited CSV files
 # Copyright & under Software IP rights (intellectual-property)
+
+"""
+     This program simulates Microsoft Azure certification exams in multiple languages.
+     It allows users to practice for various Azure certifications and provides detailed feedback.
+"""
 
 import random
 import os
 import csv
 import io
+import re
 import sys
 import textwrap
 import asyncio
+import subprocess
 import aiohttp
 import pandas as pd
 from googletrans import Translator, LANGUAGES
@@ -19,8 +26,38 @@ from nltk.tokenize import word_tokenize
 from concurrent.futures import ThreadPoolExecutor
 import time
 import spacy
+import json
+import matplotlib.pyplot as plt 
+from matplotlib import font_manager
+from PIL import Image, ImageDraw, ImageFont
 
 print("[DEBUG] Loading initial and background modules ... Please wait ....")
+
+global font 
+global writer 
+
+font_list = ['Harabara.ttf']
+font_size = 12
+
+# Generate fonts for questions
+def load_fonts():
+    global img, font, writer
+    img = Image.new('RGB', (400,200), color='black')
+    font = ImageFont.truetype(font_list[0], font_size)
+    writer = ImageDraw.Draw(img)
+
+def fprint(text, forecolour):
+    load_fonts()
+    writer.text((10,10), text, font, forecolour=forecolour)
+    # Save the image temporarily
+    temp_image_path = "temp_image.png"
+    img.save(temp_image_path)
+    # Open the image with the default image viewer
+    os.startfile(temp_image_path)
+    # Optional: Remove the temporary image file after a delay
+    time.sleep(2)  # Wait for 2 seconds
+    os.remove(temp_image_path)
+
 
 # Load the English language model
 nlp = spacy.load("en_core_web_sm")
@@ -32,23 +69,40 @@ translation_enabled = True
 def download_nltk_data():
     try:
         nltk.download('punkt')
-        print("NLTK 'punkt' resource downloaded and verified successfully.")
+        nltk.download('punkt_tab')
+        print("NLTK 'punkt' & 'punkt_tab' resource downloaded and verified successfully.")
     except Exception as e:
         print(f"Failed to download NLTK 'punkt' resource: {e}")
+        sys.exit(-1)
 
 download_nltk_data()
-nltk.download('punkt')
+nltk.data.path.append('C:/nltk_data')  # Add your NLTK data path manually
+
+
+class Sources:
+    def __init__(self):
+        self.cert_name = cert_name
+        self.apa_quotes = [('','')] # List of Tuples (category per cert, source)
+
+    def add_apa_citation(self, category, quotes):
+        for cite in quotes:
+            self.apa_quotes.append((category, cite))
 
 class Languages:
+    # This class manages language selection and translation functionality
+    # It supports multiple languages for a global audience of exam takers
     def __init__(self):
         self.ENGLISH = 'en'
         self.SPANISH = 'es'
         self.PORTUGUESE = 'pt'
         self.FRENCH = 'fr'
         self.JAPANESE = 'ja'
+        self.HEBREW = 'he'
         self.needs_translation = True
 
     def set_language(self, lang):
+        # Sets the exam language and initializes the translator if needed
+        # This allows the exam to be taken in the user's preferred language
         global gtr
         self.needs_translation = (lang != self.ENGLISH)
         if self.needs_translation:
@@ -59,10 +113,12 @@ class Languages:
     # Decorator Least-Recently-Used (LRU) side-in-memory-local-cache design-pattern to avoid "DDoS Carpet Bombing"
     # against Google Translator's API so we don't get throttled & banned, thus our
     # multilanguage simulator gets rid of 'single point of failures' caused by Google Cloud's DDoS hardening.
-    @lru_cache(maxsize=1000)
+    @lru_cache(maxsize=2048)
     # Here we achieve 'memoization', typical of 'Dynamic Programming' paradigm so we reuse previous results locally 
     # instead of brute force, going from O(n) complexity runtimes to O(nlog[n])
     def translate(self, text):
+        # Translates text using caching to improve performance and reduce API calls
+        # This ensures efficient multilingual support throughout the exam process
         global lang, translation_enabled
         if self.needs_translation and translation_enabled:
             max_retries = 3
@@ -84,6 +140,8 @@ class Languages:
 gtr = None
 
 class FontColours:
+    # Defines color codes for text formatting in the console
+    # Enhances user experience by providing visual cues and emphasis
     def __init__(self):
         self.HEADER = '\033[95m'
         self.OKBLUE = '\033[94m'
@@ -97,180 +155,147 @@ class FontColours:
 
 # *********************************************************************************
 
-# Category 1: Describe cloud concepts
-cloud_concepts_keywords = [
-    "cloud computing", "scalability", "elasticity", "agility", "fault tolerance",
-    "disaster recovery", "high availability", "load balancing", "capex", "opex",
-    "iaas", "paas", "saas", "public cloud", "private cloud", "hybrid cloud",
-    "community cloud", "multi-cloud", "cloud-native", "serverless", "pay-as-you-go",
-    "metered service", "economies of scale", "vertical scaling", "horizontal scaling",
-    "cloud migration", "cloud adoption", "cloud strategy", "cloud security",
-    "cloud compliance", "cloud governance", "cloud service provider", "virtualization",
-    "containerization", "orchestration", "microservices", "distributed computing",
-    "edge computing", "fog computing", "cloud storage", "cloud database",
-    "cloud networking", "cloud analytics", "cloud ai", "cloud ml", "cloud iot",
-    "cloud big data", "cloud devops", "cloud devsecops", "cloud automation",
-    "cloud optimization", "cloud cost management", "cloud performance", "cloud sla",
-    "cloud redundancy", "georeplication", "data residency", "data sovereignty",
-    "shared responsibility model", "multi-tenancy", "resource pooling", "on-demand self-service",
-    "rapid elasticity", "measured service", "cloud bursting", "cloud brokerage",
-    "cloud marketplace", "cloud portal", "cloud console", "cloud api", "cloud sdk",
-    "cloud cli", "cloud powershell", "cloud shell", "cloud monitoring", "cloud logging",
-    "cloud auditing", "cloud billing", "cloud pricing", "cloud tco", "cloud roi",
-    "cloud vendor lock-in", "cloud portability", "cloud interoperability", "cloud standards",
-    "cloud certifications", "cloud architecture", "cloud design patterns", "cloud best practices",
-    "cloud reference architecture", "cloud operating model", "cloud center of excellence",
-    "cloud competency center", "cloud enablement", "cloud transformation", "digital transformation",
-    "business agility", "innovation", "time-to-market", "global reach", "data center",
-    "infrastructure modernization", "application modernization", "legacy systems",
-    "hybrid it", "cloud-first strategy", "mobile-first strategy", "cloud wash",
-    "shadow it", "bring your own device", "byod", "data gravity", "data lake",
-    "data warehouse", "etl", "real-time processing", "batch processing", "stream processing",
-    "event-driven architecture", "pub/sub", "message queue", "api gateway", "service mesh",
-    "infrastructure as code", "gitops", "devsecops", "shift-left", "continuous integration",
-    "continuous delivery", "continuous deployment", "blue-green deployment", "canary deployment",
-    "a/b testing", "feature flags", "dark launching", "chaos engineering", "site reliability engineering",
-    "observability", "telemetry", "distributed tracing", "service level objectives", "service level indicators",
-    "error budgets", "capacity planning", "demand forecasting", "auto-scaling", "predictive scaling",
-    "reserved instances", "spot instances", "serverless computing", "function as a service",
-    "event-driven computing", "cloud-native security", "zero trust security", "identity and access management"
-]
-
-# Category 2: Describe Azure architecture and services
-azure_architecture_keywords = [
-    "azure", "azure portal", "azure cli", "azure powershell", "azure cloud shell",
-    "azure resource manager", "arm templates", "azure bicep", "azure blueprints",
-    "azure regions", "azure availability zones", "azure paired regions", "azure sovereign regions",
-    "azure virtual machines", "azure vm scale sets", "azure containers", "azure kubernetes service",
-    "azure container instances", "azure container registry", "azure app service", "azure functions",
-    "azure logic apps", "azure service fabric", "azure batch", "azure storage account",
-    "azure blob storage", "azure file storage", "azure queue storage", "azure table storage",
-    "azure disk storage", "azure data lake storage", "azure cosmos db", "azure sql database",
-    "azure sql managed instance", "azure database for mysql", "azure database for postgresql",
-    "azure database for mariadb", "azure synapse analytics", "azure databricks", "azure hdinsight",
-    "azure data factory", "azure stream analytics", "azure analysis services", "azure time series insights",
-    "azure purview", "azure virtual network", "azure vpn gateway", "azure expressroute",
-    "azure dns", "azure traffic manager", "azure load balancer", "azure application gateway",
-    "azure frontdoor", "azure cdn", "azure ddos protection", "azure firewall", "azure bastion",
-    "azure network watcher", "azure private link", "azure active directory", "azure ad b2c",
-    "azure ad domain services", "azure information protection", "azure key vault", "azure sentinel",
-    "azure security center", "azure ddos protection", "azure dedicated host", "azure arc",
-    "azure stack", "azure stack hub", "azure stack edge", "azure sphere", "azure iot hub",
-    "azure iot central", "azure digital twins", "azure maps", "azure time series insights",
-    "azure machine learning", "azure cognitive services", "azure bot service", "azure openai service",
-    "azure video analyzer", "azure kinect dk", "azure virtual desktop", "azure backup",
-    "azure site recovery", "azure monitor", "azure log analytics", "azure application insights",
-    "azure advisor", "azure service health", "azure policy", "azure lighthouse", "azure migrate",
-    "azure dev center", "azure devops", "azure pipelines", "azure boards", "azure repos",
-    "azure test plans", "azure artifacts", "github actions", "github advanced security",
-    "azure communication services", "azure open datasets", "azure confidential computing",
-    "azure quantum", "azure orbital", "azure private 5g core", "azure private mobile networks",
-    "azure vmware solution", "azure spring cloud", "azure api management", "azure cache for redis",
-    "azure netapp files", "azure hpc cache", "azure cyclecloud", "azure batch",
-    "azure media services", "azure video indexer", "azure speech services", "azure immersive reader",
-    "azure form recognizer", "azure face api", "azure computer vision", "azure personalizer",
-    "azure metrics advisor", "azure anomaly detector", "azure content moderator", "azure translator",
-    "azure cognitive search", "azure health bot", "azure health data services", "azure genomics",
-    "azure virtual wan", "azure route server", "azure web application firewall", "azure defender",
-    "azure information protection", "azure attestation", "azure dedicated hsm", "azure confidential ledger",
-    "azure chaos studio", "azure deployment environments", "azure container apps", "azure static web apps",
-    "azure data share", "azure managed grafana", "azure managed prometheus", "azure automation",
-    "azure update management", "azure automanage", "azure resource mover", "azure virtual network manager"
-]
-
-# Category 3: Describe Azure management and governance
-azure_management_keywords = [
-    "azure resource manager", "azure resource groups", "azure subscriptions", "azure management groups",
-    "azure rbac", "azure role assignments", "azure custom roles", "azure policy", "azure blueprints",
-    "azure management locks", "azure tags", "azure cost management", "azure advisor", "azure monitor",
-    "azure log analytics", "azure application insights", "azure service health", "azure resource graph",
-    "azure arc", "azure lighthouse", "azure security center", "azure sentinel", "azure compliance",
-    "azure trust center", "azure service trust portal", "azure governance", "azure management scope",
-    "azure hierarchy", "azure tenant", "azure directory", "azure ad connect", "azure ad identity protection",
-    "azure ad privileged identity management", "azure ad conditional access", "azure ad access reviews",
-    "azure ad entitlement management", "azure ad terms of use", "azure ad b2b", "azure ad b2c",
-    "azure ad domain services", "azure ad authentication", "azure ad authorization", "azure ad sso",
-    "azure ad mfa", "azure ad self-service password reset", "azure ad identity secure score",
-    "azure ad reporting", "azure ad auditing", "azure ad sign-in logs", "azure ad provisioning",
-    "azure ad gallery applications", "azure ad app registrations", "azure ad enterprise applications",
-    "azure ad managed identities", "azure ad certificates", "azure ad naming policy", "azure ad branding",
-    "azure ad password protection", "azure ad identity governance", "azure ad access packages",
-    "azure ad administrative units", "azure ad groups", "azure ad dynamic groups", "azure ad licenses",
-    "azure ad hybrid identity", "azure ad connect health", "azure ad password writeback", "azure ad cloud sync",
-    "azure policy initiatives", "azure policy exemptions", "azure policy compliance", "azure policy effects",
-    "azure policy assignments", "azure policy definitions", "azure policy parameters", "azure policy remediation",
-    "azure blueprints definition", "azure blueprints assignment", "azure blueprints versioning",
-    "azure management api", "azure resource providers", "azure resource locks", "azure resource move",
-    "azure resource export", "azure resource tagging", "azure resource naming", "azure resource organization",
-    "azure cost allocation", "azure cost budgets", "azure cost alerts", "azure cost optimization",
-    "azure cost forecasting", "azure cost recommendations", "azure billing", "azure invoices",
-    "azure payment methods", "azure pricing calculator", "azure tco calculator", "azure reservations",
-    "azure savings plans", "azure hybrid benefit", "azure free account", "azure support plans",
-    "azure service level agreements", "azure preview features", "azure updates", "azure roadmap",
-    "azure status", "azure security baselines", "azure security benchmarks", "azure defender for cloud",
-    "azure network security groups", "azure ddos protection", "azure firewall", "azure private link",
-    "azure vpn gateway", "azure expressroute", "azure bastion", "azure just-in-time vm access",
-    "azure key vault", "azure information protection", "azure confidential computing", "azure backup",
-    "azure site recovery", "azure update management", "azure automation", "azure logic apps",
-    "azure event grid", "azure service bus", "azure queue storage", "azure api management",
-    "azure devops", "azure pipelines", "azure boards", "azure repos", "azure artifacts",
-    "azure test plans", "azure load testing", "azure dev center", "azure lab services",
-    "azure mobile apps", "azure powerapps", "azure power automate", "azure power bi", "azure synapse",
-    "azure purview", "azure data catalog", "azure data factory", "azure databricks", "azure machine learning"
-]
-
-# *********************************************************************************
-
 class Question:
     def __init__(self, question, options, correct_answer, explanation=""):
         self.question = question
         self.options = options
         self.correct_answer = correct_answer
         self.explanation = explanation
-        self.category = self.categorize_question()
-
-    def categorize_question(self):
-        # Process the question text
-        doc = nlp(self.question.lower())
-        
-        # Count keyword matches for each category
-        cloud_count = sum(1 for token in doc if any(keyword in token.text for keyword in cloud_concepts_keywords))
-        architecture_count = sum(1 for token in doc if any(keyword in token.text for keyword in azure_architecture_keywords))
-        management_count = sum(1 for token in doc if any(keyword in token.text for keyword in azure_management_keywords))
-
-        # Determine the category based on keyword counts
-        if cloud_count > architecture_count and cloud_count > management_count:
-            return "Describe cloud concepts"
-        elif architecture_count > cloud_count and architecture_count > management_count:
-            return "Describe Azure architecture and services"
-        else:
-            return "Describe Azure management and governance"
+        self.category = None # Initialize category as None, will be set by ExamSimulator
 
 class ExamSimulator:
-    def __init__(self, csv_file, renderer, translator):
+    # Core class that manages the entire exam simulation process
+    def __init__(self, csv_file, renderer, translator, certification_json_path, certification_name):
+        # Initializes the exam simulator with necessary components
+        # Sets up the exam environment based on the selected certification
         self.renderer = renderer
         self.translator = translator
-        self.curate_exam_file(csv_file)
         self.csv_file = csv_file
+        self.certification_name = certification_name
+        self.certification_data = self.load_certification_json(certification_json_path)
+        self.nlp = spacy.load("en_core_web_sm")
         self.questions = self.load_questions()
         self.score = 0
         self.total_questions = len(self.questions)
-        self.category_scores = {
-            "Describe cloud concepts": 0,
-            "Describe Azure architecture and services": 0,
-            "Describe Azure management and governance": 0
-        }
+        self.category_scores = self.initialize_category_scores()
+        self.src_mgr = Sources()
 
     # =====================================================#
+    global translated_texts
+    global questions
+
+    def load_sources(self):
+        src_mgr.add_apa_citation(self.certification_name, citations)
+        src_mgr.add_apa_citation(self.certification_name, citations)
+        src_mgr.add_apa_citation(self.certification_name, citations)
+        src_mgr.add_apa_citation(self.certification_name, citations)
+
+    def load_questions(self):
+        # Loads and processes questions from the CSV file
+        # Translates questions if necessary and categorizes them
+        questions = []
+        translated_texts  = []
+        try:
+            # Load the CSV file
+            df = pd.read_csv(self.csv_file, sep=';')
+            print(f"[DEBUG][load_questions] CSV file loaded successfully. Shape: {df.shape}")
+            print(f"[DEBUG][load_questions] Columns: {df.columns}")
+
+            # Check for expected columns
+            expected_columns = ['Question', 'OptionA', 'OptionB', 'OptionC', 'OptionD', 'CorrectAnswer', 'Explanation']
+            for col in expected_columns:
+                if col not in df.columns:
+                    print(f"[DEBUG][load_questions] Missing expected column: {col}")
+                    return []
+
+            texts_to_translate = []
+
+            for index, row in df.iterrows():
+                try:
+                    # Check the type of 'row' to ensure it's a Series
+                    if isinstance(row, pd.Series):
+                        texts_to_translate.extend([
+                            row.array[0],
+                            row.array[1],
+                            row.array[2],
+                            row.array[3],
+                            row.array[4],
+                            row.array[5],
+                            row.array[6]
+                        ])
+                    else:
+                        print(f"[DEBUG][load_questions] Unexpected row type at index {index}: {type(row)}")
+                except Exception as e:
+                    print(f"[DEBUG][load_questions] Error processing row index {index}: {e}")
+
+            # Proceed to translate texts
+            translated_texts = self.parallel_translate(texts_to_translate)
+
+            if isinstance(translated_texts, list) and all(isinstance(text, str) for text in translated_texts):
+                print(f"{self.renderer.OKGREEN}[DEBUG][load_questions] All translated texts are strings.")
+            else:
+                print(f"{self.renderer.FAIL}[DEBUG][load_questions] Translated texts are not in the expected format!")
+            
+            #print(f"{self.renderer.WARNING}[DEBUG][load_questions] Type of translated_texts: {type(translated_texts)}")
+            #print(f"{self.renderer.WARNING}[DEBUG][load_questions] Translated texts content (trimmed): {translated_texts[:7]}")
+            #print(self.renderer.ENDC)
+
+            # Check if any translations are empty
+            if not any(translated_texts):
+                print("[DEBUG][load_questions] No translations were returned. Please check your translation logic since 'parallel_translate' returned an empty list.")
+            i = 0
+            # Process translated texts safely (avoid looping 'out of bounds')
+            while i < len(translated_texts):
+                if i + 6 >= len(translated_texts):  # Ensure enough data for a full set of 6 items
+                    print(f"[DEBUG][load_questions] Not enough translated texts to create a question for index {i}")
+                    break  # Exit the loop if there's not enough data for a complete question
+                # print(f"[DEBUG][load_questions] Processing translated_texts from index {i} to {i + 5}")
+  
+                try:
+                    question = textwrap.fill(translated_texts[i], width=70).strip()
+                    # print(f"{self.renderer.BOLD}[DEBUG][load_questions] Question text: {question}\n{self.renderer.ENDC}")
+                
+                    options = [
+                        f"A.{translated_texts[i+1]}",
+                        f"B.{translated_texts[i+2]}",
+                        f"C.{translated_texts[i+3]}",
+                        f"D.{translated_texts[i+4]}"
+                    ]
+                    correct_answer = translated_texts[i+5].upper()  # Ensure it's a string and uppercase
+                    explanation = textwrap.fill(translated_texts[i+6].strip(), width=70)  # Ensure it's a string
+                    question_obj = Question(question, options, correct_answer, explanation)
+                    question_obj.category = self.categorize_question(question)
+                    questions.append(question_obj)
+
+                    i += 7      # Move to the next set of 7 items (Question + 6 fields)
+                except IndexError as e:
+                    print(f"[DEBUG][load_questions] IndexError at index {i}[ * is_integer = {i.is_integer()}]: {e}")
+                except Exception as e:
+                    print(f"[DEBUG][load_questions] Error processing translated texts at index {i}[ * is_integer = {i.is_integer()}]: {e}")
+
+            if not questions:
+                print(self.renderer.WARNING + self.translator.translate("No questions were loaded from the CSV file.") + self.renderer.ENDC)
+                sys.exit(1)
+
+            print(f"[DEBUG][load_questions] Loaded {len(questions)} questions successfully.")
+            return questions
+
+        except Exception as e:
+            print(f"[DEBUG][load_questions] Error in 'load_questions()': {translated_texts}|{e.add_note}|{e.args}|{e.__traceback__}")
+            raise
 
     # Execute translations asynchronously, concurrently & quasi-parallel runs - 
     # improving overall performance.
     async def translate_batch(self, texts):
+        # Performs batch translation of texts asynchronously
+        # Improves performance for translating large sets of exam questions
         async with aiohttp.ClientSession() as session:
             tasks = [self.translator.translate(text) for text in texts]
             return await asyncio.gather(*tasks)
 
     def clear_screen(self):
+        # Clears the console screen for a clean user interface
+        # Enhances readability during the exam process
         # For Windows
         if os.name == 'nt':
             _ = os.system('cls')
@@ -278,65 +303,86 @@ class ExamSimulator:
         else:
             _ = os.system('clear')
 
-    def curate_exam_file(self, csv_file):
-        # Read the CSV file with semicolon delimiter
-        df = pd.read_csv(csv_file, sep=';')
-        df = df.astype(str)                     # Convert all columns to strings
-        # Prepare a backup (just in case)
-        df.to_csv(csv_file + '.bak', sep=';', index=False)
-        # Replace ',' with ' ' and trim tabs/whitespaces in the 'long-text' columns
-        columns_to_clean = ['Question', 'OptionA', 'OptionB', 'OptionC', 'OptionD', 'Explanation']
-        for col in columns_to_clean:
-            df[col] = df[col].str.replace(',', ' ').replace('[', ' ').replace(']', ' ').str.strip()
+    def load_certification_json(self, filename):
+        # Loads certification-specific data from a JSON file
+        # Allows for dynamic configuration of different exam types and their scoring breakdown categories
+        try:
+            print(f"{self.renderer.WARNING}[DEBUG][load_certification_json] Trying to open '{filename}'")
+            with open(filename, 'r') as f:
+                data = json.load(f)
+                # print(f"{self.renderer.OKCYAN}[DEBUG][load_certification_json] Loaded certification data: {data}")
+                return data
+        except Exception as e:
+            print(f"{self.renderer.FAIL}[FATAL][load_certification_json] Error loading JSON: {e}")
+            return None            
 
-        # Save the updated CSV with semicolon delimiter
-        df.to_csv(csv_file, sep=';', index=False)
-        df.head()
+    def initialize_category_scores(self):
+        categories = self.get_certification_categories()
+        if not categories:
+            print(f"Warning: No categories found for certification {self.certification_name}")
+            return {"Uncategorized": 0}
+        return {category: 0 for category in categories}
 
-    def load_questions(self):
-        questions = []
-        
-        # Open relevant (chosen Azure cert. by user) CSV exam into Pandas dataframe
-        df = pd.read_csv(self.csv_file, sep=';')
-        
-        # Prep. all questionaires for translation
-        texts_to_translate = []
-        for _, row in df.iterrows():
-            texts_to_translate.extend([row['Question'], row['OptionA'], row['OptionB'], row['OptionC'], row['OptionD'], row['Explanation']])
-        
-        # Batch & Async translation
-        # loop = asyncio.get_event_loop()
-        # translated_texts = loop.run_until_complete(self.translate_batch(texts_to_translate))
-        # Parallel translate
-        translated_texts = self.parallel_translate(texts_to_translate)
+    def categorize_question(self, question_text):
+        categories = self.get_certification_categories()
+        if not categories or categories == ["Uncategorized"]:
+            return "Uncategorized"
+        doc = self.nlp(question_text.lower())
+        # Initialize a dictionary to store keyword match counts for each category
+        category_keyword_counts = {}
+        # Iterate over all categories loaded for the current certification
+        for cert in self.certification_data["certifications"]:
+            if cert['certification'] == self.certification_name:
+                for category in cert['categories']:
+                    # Count keyword matches
+                    keywords = category['keywords']
+                    count = sum(1 for token in doc if any(keyword.lower() in token.text for keyword in keywords))
+                    # Store the count for this category
+                    category_keyword_counts[category['category']] = count
+        # Find the category with the highest keyword match count
+        best_category = max(category_keyword_counts, key=category_keyword_counts.get)
+        # Return the category with the most keyword matches
+        return best_category
 
-        # Prep. translated self-assessment cert's questions
-        for i in range(0, len(translated_texts), 6):
-            question = translated_texts[i]                                  # CSV Schema-Column: Question;
-            options = [f"A.{translated_texts[i+1]}",                        # CSV Schema-Column: OptionA;
-                       f"B.{translated_texts[i+2]}",                        # CSV Schema-Column: OptionB;
-                       f"C.{translated_texts[i+3]}",                        # CSV Schema-Column: OptionC;
-                       f"D.{translated_texts[i+4]}",                        # CSV Schema-Column: OptionD;
-                       "Q. Abort"]
+    def get_certification_categories(self):
+        if not self.certification_data:
+            print("Error: Certification data not loaded.")
+            return []
+        certification = next((cert for cert in self.certification_data.get("certifications", []) 
+                              if cert["certification"] == self.certification_name), None)
+        if certification:
+            categories = [cat["category"] for cat in certification.get("categories", [])]
+            if not categories:
+                print(f"Warning: No categories found for certification {self.certification_name}")
+                return ["Uncategorized"]
+            return categories
+        print(f"Error: Certification {self.certification_name} not found in the JSON data.")
+        return ["Uncategorized"]
 
-            correct_answer = df.iloc[i//6]['CorrectAnswer']                 # CSV Schema-Column: CorrectAnswer;
-            explanation = textwrap.fill(translated_texts[i+5], width=70)    # CSV Schema-Column: Explanation;
-        
-            # Take the translated self-assessment into memory, interactive mode for the user
-            questions.append(Question(question,options,correct_answer,explanation))
+    def analyze_nlp_for_category(self, category_name):
+        certification = next((cert for cert in self.certification_data["certifications"] 
+                              if cert["certification"] == self.certification_name), None)
+        if certification:
+            category = next((cat for cat in certification["categories"] 
+                             if cat["category"] == category_name), None)
+            if category:
+                return category.get("keywords", [])
+        return None
 
-        if not questions or questions.__len__() <= 0:
-            print(self.renderer.WARNING + self.translator.translate("No questions were loaded from the CSV file.") + self.renderer.ENDC)
-            sys.exit(1)
-        
-        return questions
+    ######################################################
 
     def run_exam(self):
+        # Executes the main exam process
+        # Presents questions, captures user answers, and provides immediate feedback
         random.shuffle(self.questions)
         for i, question in enumerate(self.questions, 1):
             self.clear_screen()
-            print(self.renderer.OKBLUE + self.translator.translate(f"Question #{i} of {self.total_questions}") + self.renderer.ENDC)
-            print(self.renderer.UNDERLINE + question.question + self.renderer.ENDC)
+            print(self.renderer.OKBLUE + self.translator.translate(f"Question #{i} of {self.total_questions}") + self.renderer.ENDC + "\n")
+            """
+            Ask the question!
+            """
+            # fprint(self.renderer.UNDERLINE + question.question + self.renderer.ENDC, "white")
+            print(self.renderer.UNDERLINE + question.question + self.renderer.ENDC + "\n")
             for option in question.options:
                 print(option)
             
@@ -347,12 +393,13 @@ class ExamSimulator:
             if user_answer == 'Q':
                 print(self.renderer.WARNING + self.translator.translate("Exiting and aborting exam test ... See You Later!!") + self.renderer.ENDC)
                 print(f"{self.renderer.WARNING}Printing score up to this point until the exam was aborted: ")
-                self.show_results()
-                quit()
+                return
+
             if user_answer == question.correct_answer:
                 print(self.renderer.OKGREEN + self.translator.translate("\nCorrect!") + self.renderer.ENDC)
                 self.score += 1
                 self.category_scores[question.category] += 1
+
             else:
                 print(self.renderer.WARNING + self.translator.translate(f"\nIncorrect. The correct answer is {question.correct_answer}.") + self.renderer.ENDC)
             
@@ -361,6 +408,8 @@ class ExamSimulator:
             input(self.translator.translate("\nPress [Enter] to continue..."))
 
     def show_results(self):
+        # Executes the main exam process
+        # Presents questions, captures user answers, and provides immediate feedback
         self.clear_screen()
         percentage = (self.score / self.total_questions) * 1000
         print(self.renderer.OKBLUE + self.translator.translate(f"Exam {self.renderer.BOLD}{cert_name}{self.renderer.ENDC} completed! Your score (Microsoft Notation - Max Score is 1000, Passing Score is 700): {self.score}/{self.total_questions} ({percentage:.2f}%)") + self.renderer.ENDC)
@@ -371,33 +420,134 @@ class ExamSimulator:
         print(f"\n{self.renderer.WARNING}Score breakdown by category:{self.renderer.ENDC}")
         self.display_category_scores()
 
+    ######################################################
+
+    def initialize_category_scores(self):
+        categories = self.get_certification_categories()
+        return {category: 0 for category in categories}
+
+    def get_certification_categories(self):
+        certification = next((cert for cert in self.certification_data["certifications"] 
+                              if cert["certification"] == self.certification_name), None)
+        if certification:
+            return [cat["category"] for cat in certification["categories"]]
+        return []
+
     def display_category_scores(self):
         max_length = max(len(category) for category in self.category_scores.keys())
         for category, score in self.category_scores.items():
-            category_score = (score / self.total_questions) * 1000
-            bar_length = int(category_score / 20)  # Scale to 50 characters max in the ASCII-based bar chart
+            category_score = (score / self.total_questions) * 1000 # OnVue max score is 1000
+            bar_length = int(category_score / 20)  # Scale to 50 characters max
             bar = '█' * bar_length + '▒' * (50 - bar_length)
-            print(f"{category.ljust(max_length)} : {bar} {category_score:.2f}")
+            # Get category weight from JSON
+            category_weight = self.get_category_weight(category)
+            # Analyze NLP keywords for the category
+            keywords = self.analyze_nlp_for_category(category)
+ 
+            if keywords:
+                keyword_info = f"\nTop keywords: {', '.join(keywords[:10])}"
+            else:
+                keyword_info = "\nNo keywords available for this category."
+            print(f"{category.ljust(max_length)} : {bar} {category_score:.2f} (Weight: {category_weight})")
+
+    def get_category_keywords(self, category_name):
+        certification = next((cert for cert in self.certification_data["certifications"] 
+                              if cert["certification"] == self.certification_name), None)
+        if certification:
+            category = next((cat for cat in certification["categories"] 
+                             if cat["category"] == category_name), None)
+            if category:
+                return category.get("keywords", {})
+        return None
+
+    def get_category_weight(self, category_name):
+        # Retrieves the weight of a specific category in the exam
+        # Ensures accurate scoring based on the certification's requirements
+        certification = next((cert for cert in self.certification_data["certifications"] 
+                              if cert["certification"] == self.certification_name), None)
+        if certification:
+            category = next((cat for cat in certification["categories"] 
+                             if cat["category"] == category_name), None)
+            if category:
+                weight = category.get("weight", "0%")
+                return float(weight.split('-')[0].strip('%')) / 100  # Convert percentage to decimal
+        return 0
 
     def tokenize_and_translate(self, text):
-        if isinstance(text, float):
-            print("[DEBUG] Received a float instead of a string. Converting to string.")
-            text = str(text)  # or handle as you see fit
+        # Breaks down and translates text for more accurate language processing
+        # Supports the multilingual aspect of the exam simulator
+        # print(f"[DEBUG][tokenize_and_translate] Received text for translation: {text}")  # Debug input
+        if not isinstance(text, str):
+            print(f"[DEBUG][tokenize_and_translate] Received a '{text}' data type instead of a string. Converting to string.")
+            text = str(text)
         try:
+            # Ensure the Punkt tokenizer is downloaded
+            try:
+                nltk.data.find('tokenizers/punkt')
+            except Exception:
+                print(f"[DEBUG][tokenize_and_translate] NLTK's {nltk.data.find('tokenizers/punkt')} not found, downloading again ...")
+                download_nltk_data()
             tokens = word_tokenize(text)
             translated_tokens = [self.translator.translate(token) for token in tokens]
-            return ' '.join(translated_tokens)
+            result = ' '.join(translated_tokens)
+            # print(f"[DEBUG][tokenize_and_translate] Translated result: {result}")  # Debug output
+            # print(f"[DEBUG][tokenize_and_translate] Translated result's count: {result.count(result)}")  # Debug output
+            return result if result else ''
         except LookupError:
             return ' '.join([self.translator.translate(word) for word in text.split()])
         except Exception as e:
-            print(f"Tokenization failed: {e}. Using original text.")
-            return self.translator.translate(text)
-
+            print(f"[WARNING][tokenize_and_translate] Tokenization failed: {e}. Using original text.")
+            return self.translator.translate(text)  
+        
     def parallel_translate(self, texts):
+        # Performs translations in parallel to improve efficiency
+        # Speeds up the process of preparing multilingual exam content
+        # Filter out None or non-string types from texts
+        
+        valid_texts = [text for text in texts] # if isinstance(text, str) and text.strip()]
+
         with ThreadPoolExecutor() as executor:
-            return list(executor.map(self.tokenize_and_translate, texts))
+            translated_texts = list(executor.map(self.tokenize_and_translate, texts))
+            """
+            print(f"{self.renderer.BOLD}[DEBUG][parallel_translate] -> 'translated_texts[0]'' = {translated_texts[0]}{self.renderer.ENDC}")
+            print(f"{self.renderer.BOLD}[DEBUG][parallel_translate] -> 'translated_texts[1]'' = {translated_texts[1]}{self.renderer.ENDC}")
+            print(f"{self.renderer.BOLD}[DEBUG][parallel_translate] -> 'translated_texts[2]'' = {translated_texts[2]}{self.renderer.ENDC}")
+            print(f"{self.renderer.BOLD}[DEBUG][parallel_translate] -> 'translated_texts[3]'' = {translated_texts[3]}{self.renderer.ENDC}")
+            print(f"{self.renderer.BOLD}[DEBUG][parallel_translate] -> 'translated_texts[4]'' = {translated_texts[4]}{self.renderer.ENDC}")
+            print(f"{self.renderer.BOLD}[DEBUG][parallel_translate] -> 'translated_texts[5]'' = {translated_texts[5]}{self.renderer.ENDC}")
+            print(f"{self.renderer.BOLD}[DEBUG][parallel_translate] -> 'translated_texts[6]'' = {translated_texts[6]}{self.renderer.ENDC}")            
+            """
+            # Verify that all elements in translated_texts are strings
+        # if not all(isinstance(text, str) for text in translated_texts):
+        #    print("[DEBUG][parallel_translate] Warning: Non-string value detected in translated_texts!")
+        
+        # Debugging: Log the translated texts
+        # print(f"[DEBUG][parallel_translate] <<<<$$$ Total translated texts count &&&>>>>: {len(translated_texts)}")  # Count of total translations
+        # print(f"[DEBUG][parallel_translate] Translated texts: {translated_texts}")  # Show contents of the list
+        return translated_texts
+
+#############################################################################
+############## MAIN ENTRY POINT #############################################
+#############################################################################
 
 def main():
+
+    """
+
+        Main entry point of the program
+        Manages the overall flow of the exam simulation process
+
+        User selects language and certification
+        This allows for a personalized exam experience
+
+        Exam simulation is initiated
+        The user goes through the exam process
+
+        Results are displayed and the user is given the option to retry
+        Provides immediate feedback and encourages continued learning
+
+    """
+
     global questions_input_file
     global cert_name
     global lang
@@ -406,105 +556,145 @@ def main():
     renderer = FontColours()
     langs = Languages()
 
-    print("Welcome to the ETC-CertTester Azure Exam Simulator!\n")
-    print("Please choose your preferred language to take the test:")
-    print(f"{renderer.OKCYAN}1. English{renderer.ENDC}")
-    print(f"{renderer.OKCYAN}2. Español{renderer.ENDC}")
-    print(f"{renderer.OKCYAN}3. Português{renderer.ENDC}")
-    print(f"{renderer.OKCYAN}4. Français{renderer.ENDC}")
-    print(f"{renderer.OKCYAN}5. 日本語{renderer.ENDC}")
+    while True:
+        try:
+            simulator = None
+   
+            # Commands to run in PowerShell
+            commands = [
+                '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
+                '$hebrew_text = "עִברִית"',
+                'Write-Host $hebrew_text'
+            ]
 
-    choice = input("Enter the number corresponding to your language: ").strip()
+            # Open PowerShell and execute commands
+            powershell_process = subprocess.Popen(["powershell"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    if choice == '1':
-        lang = langs.ENGLISH
-    elif choice == '2':
-        lang = langs.SPANISH
-    elif choice == '3':
-        lang = langs.PORTUGUESE
-    elif choice == '4':
-        lang = langs.FRENCH
-    elif choice == '5':
-        lang = langs.JAPANESE
-    else:
-        print("Invalid selection. Exiting...")
-        sys.exit(1)
 
-    langs.set_language(lang)  # Set the language and initialize translator if needed
+            # Run each command in PowerShell
+            for command in commands:
+                print(f"[DEBUG][main] Setting up terminal for UTF-8 languages {command} ...")
+                subprocess.run(["powershell", "-Command", command])
+                time.sleep(0.125)  # Optional: Add delay between commands for readability
+            # Optionally, close stdin to signify that we're done sending commands
+            powershell_process.stdin.close()
+            # Wait for PowerShell to complete
+            stdout, stderr = powershell_process.communicate()
+            # Print the output from PowerShell
+            print(stdout.decode('utf-8'))
+            print(stderr.decode('utf-8'))
 
-    print(langs.translate("Please choose the Azure certification you want to practice:"))
-    print(f"{renderer.BOLD}" + langs.translate("1. AZ-900: Microsoft Azure Fundamentals") + f"{renderer.ENDC}")
-    print(f"{renderer.BOLD}" + langs.translate("2. AZ-104: Microsoft Azure Administrator") + f"{renderer.ENDC}")
-    print(f"{renderer.BOLD}" + langs.translate("3. AZ-204: Developing Solutions for Microsoft Azure") + f"{renderer.ENDC}")
-    print(f"{renderer.BOLD}" + langs.translate("4. AZ-305: Designing Microsoft Azure Infrastructure Solutions") + f"{renderer.ENDC}")
-    print(f"{renderer.BOLD}" + langs.translate("5. AZ-400: Designing and Implementing Microsoft DevOps Solutions") + f"{renderer.ENDC}")
-    print(f"{renderer.BOLD}" + langs.translate("6. AZ-500: Microsoft Azure Security Technologies") + f"{renderer.ENDC}")
-    print(f"{renderer.BOLD}" + langs.translate("7. AZ-700: Designing and Implementing Microsoft Azure Networking Solutions") + f"{renderer.ENDC}")
-    print(f"{renderer.BOLD}" + langs.translate("8. AZ-800: Administering Windows Server Hybrid Core Infrastructure") + f"{renderer.ENDC}")
-    print(f"{renderer.BOLD}" + langs.translate("9. AZ-140: Configuring and Operating Microsoft Azure Virtual Desktop\n") + f"{renderer.ENDC}")
+            ### Interactive menu to implemented Spaced-Repetition (Leibniz Algorithm) 
+            ### and microlearning tecniques.Main loop.
+            print("Welcome to the ETC-CertTester Azure Exam Simulator!\n")
+            print("Please choose your preferred language to take the test:")
+            print(f"{renderer.OKCYAN}1. English{renderer.ENDC}")
+            print(f"{renderer.OKCYAN}2. Español{renderer.ENDC}")
+            print(f"{renderer.OKCYAN}3. Português{renderer.ENDC}")
+            print(f"{renderer.OKCYAN}4. Français{renderer.ENDC}")
+            print(f"{renderer.OKCYAN}5. 日本語{renderer.ENDC}")
+            print(f"{renderer.OKCYAN}6. עִברִית{renderer.ENDC}")
+            print(f"{renderer.OKCYAN}Q. Any key to quit{renderer.ENDC}")
 
-    choice = input(langs.translate("Enter the number corresponding to your certification: ")).strip()
+            choice = input("Enter the number corresponding to your language: ").strip()
 
-    if choice == '1':
-        questions_input_file = 'az900_questions.csv'
-        cert_name = "AZ-900: Microsoft Azure Fundamentals"
-    elif choice == '2':
-        cert_name = "AZ-104: Microsoft Azure Administrator"
-        questions_input_file = 'az104_questions.csv'
-    elif choice == '3':
-        cert_name = "AZ-204: Developing Solutions for Microsoft Azure"
-        questions_input_file = 'az204_questions.csv'
-    elif choice == '4':
-        cert_name = "AZ-305: Designing Microsoft Azure Infrastructure Solutions"
-        questions_input_file = 'az305_questions.csv'
-    elif choice == '5':
-        questions_input_file = 'az400_questions.csv'
-        cert_name = "AZ-400: Designing and Implementing Microsoft DevOps Solutions"
-    elif choice == '6':
-        questions_input_file = 'az500_questions.csv'
-        cert_name = "AZ-500: Microsoft Azure Security Technologies"
-    elif choice == '7':
-        questions_input_file = 'az700_questions.csv'
-        cert_name = "AZ-700: Designing and Implementing Microsoft Azure Networking Solutions"
-    elif choice == '8':
-        questions_input_file = 'az800_questions.csv'
-        cert_name = "AZ-800: Administering Windows Server Hybrid Core Infrastructure"
-    elif choice == '9':
-        questions_input_file = 'az140_questions.csv'
-        cert_name = "AZ-140: Configuring and Operating Microsoft Azure Virtual Desktop"
-    else:
-        print("Invalid selection. Exiting...")
-        sys.exit(1)
+            if choice == '1':
+                lang = langs.ENGLISH
+            elif choice == '2':
+                lang = langs.SPANISH
+            elif choice == '3':
+                lang = langs.PORTUGUESE
+            elif choice == '4':
+                lang = langs.FRENCH
+            elif choice == '5':
+                lang = langs.JAPANESE
+            elif choice == '6':
+                lang = langs.HEBREW
+            else:
+                print("Invalid selection or chose to quit. Exiting...")
+                sys.exit(0)
 
-    try:
-        end_it = False 
+            langs.set_language(lang)  # Set the language and initialize translator if needed
+\
+            print(langs.translate("Please choose the Azure certification you want to practice:"))
+            print(f"{renderer.BOLD}" + langs.translate("1. AZ-900: Microsoft Azure Fundamentals") + f"{renderer.ENDC}")
+            print(f"{renderer.BOLD}" + langs.translate("2. AZ-104: Microsoft Azure Administrator") + f"{renderer.ENDC}")
+            print(f"{renderer.BOLD}" + langs.translate("3. AZ-204: Developing Solutions for Microsoft Azure") + f"{renderer.ENDC}")
+            print(f"{renderer.BOLD}" + langs.translate("4. AZ-305: Designing Microsoft Azure Infrastructure Solutions") + f"{renderer.ENDC}")
+            print(f"{renderer.BOLD}" + langs.translate("5. AZ-400: Designing and Implementing Microsoft DevOps Solutions") + f"{renderer.ENDC}")
+            print(f"{renderer.BOLD}" + langs.translate("6. AZ-500: Microsoft Azure Security Technologies") + f"{renderer.ENDC}")
+            print(f"{renderer.BOLD}" + langs.translate("7. AZ-700: Designing and Implementing Microsoft Azure Networking Solutions") + f"{renderer.ENDC}")
+            print(f"{renderer.BOLD}" + langs.translate("8. AZ-800: Administering Windows Server Hybrid Core Infrastructure") + f"{renderer.ENDC}")
+            print(f"{renderer.BOLD}" + langs.translate("9. AZ-140: Configuring and Operating Microsoft Azure Virtual Desktop") + f"{renderer.ENDC}")
+            print(f"{renderer.BOLD}" + langs.translate("10. MS-900: Microsoft 365 Certified: Fundamentals") + f"{renderer.ENDC}")
+            print(f"{renderer.BOLD}" + langs.translate("11. PL-900: Microsoft Certified: Power Platform Fundamentals") + f"{renderer.ENDC}")
+            print(f"{renderer.BOLD}" + langs.translate("Q. Abort/Exit Simulation Platform") + f"{renderer.ENDC}")
 
-        while end_it == False:
-            simulator = ExamSimulator(questions_input_file, renderer, langs)
+            choice = input(langs.translate("\nEnter the number corresponding to your certification: ")).strip().upper()
+
+            ### Debugging print-outs - uncomment only when issues need to be investigated & fixed
+            """
+                print(f"{renderer.OKCYAN}[DEBUG] {choice}{renderer.ENDC}")
+                print(f"{renderer.WARNING}[DEBUG] {choice.casefold}{renderer.ENDC}")
+                print(f"{renderer.OKCYAN}[DEBUG] {choice}{renderer.ENDC}")
+            """
+            if choice == 'Q':
+                print(f"{renderer.FAIL} Aborting ETC-CertTests simulation program ... See you later!\n {renderer.ENDC}")
+                sys.exit(0)
+
+            if choice in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11']:
+                cert_map = {
+                    '1': ('az900_questions.csv', "AZ-900: Microsoft Azure Fundamentals"),
+                    '2': ('az104_questions.csv', "AZ-104: Microsoft Azure Administrator"),
+                    '3': ('az204_questions.csv', "AZ-204: Developing Solutions for Microsoft Azure"),
+                    '4': ('az305_questions.csv', "AZ-305: Designing Microsoft Azure Infrastructure Solutions"),
+                    '5': ('az400_questions.csv', "AZ-400: Designing and Implementing Microsoft DevOps Solutions"),
+                    '6': ('az500_questions.csv', "AZ-500: Microsoft Azure Security Technologies"),
+                    '7': ('az700_questions.csv', "AZ-700: Designing and Implementing Microsoft Azure Networking Solutions"),
+                    '8': ('az800_questions.csv', "AZ-800: Administering Windows Server Hybrid Core Infrastructure"),
+                    '9': ('az140_questions.csv', "AZ-140: Configuring and Operating Microsoft Azure Virtual Desktop"),
+                    '10': ('ms900_questions.csv', "MS-900: Microsoft 365 Certified: Fundamentals"),
+                    '11': ('pl900_questions.csv', "PL-900: Microsoft Certified: Power Platform Fundamentals")
+                }
+                questions_input_file, cert_name = cert_map[choice]
+
+                # Check if the CSV file exists
+                if not os.path.exists(questions_input_file):
+                    raise FileNotFoundError(f"{renderer.FAIL}[FATAL] The file {questions_input_file} does not exist.")
+            
+                try:
+                    simulator = ExamSimulator(questions_input_file, renderer, langs, 'scoring.json', cert_name)
         
-            print(f"{simulator.renderer.HEADER}" + langs.translate(f"Welcome to the {cert_name} Exam Simulator! -Copyright Vinicio S. Flores <v.flores.hernandez@accenture.com>") + f"{simulator.renderer.ENDC}")
-            input(f"{simulator.renderer.BOLD}" + langs.translate(f"Press Enter to start the exam...") + f"{simulator.renderer.ENDC}")
+                    if simulator is None:
+                        print(f"{renderer.FAIL}[FATAL]'ExamSimulator' initialization failed. Please check input data.{renderer.ENDC}")
+                    else:
+                        print(f"{simulator.renderer.HEADER}" + langs.translate(f"Welcome to the {cert_name} Exam Simulator! -Copyright Vinicio S. Flores <v.flores.hernandez@accenture.com>") + f"{simulator.renderer.ENDC}")
+                        input(f"{simulator.renderer.BOLD}" + langs.translate(f"Press Enter to start the exam...") + f"{simulator.renderer.ENDC}")
         
-            simulator.run_exam()
-            simulator.show_results()
+                        simulator.run_exam()
+                        simulator.show_results()
 
-            continue_input = 'X'
+                        continue_input = input(f"{simulator.renderer.BOLD}Want to try again another or same certification exam? (y/N) {simulator.renderer.ENDC}").strip().upper()
+                        if continue_input == 'Y':
+                            main()  # Restart from the beginning
+                        elif continue_input == 'N':
+                            break
+                        else:
+                            print(f"{renderer.WARNING} Invalid selection. Try again or press [Q] to abort simulation...")
+                
+                except FileNotFoundError as e:
+                    print(f"{renderer.FAIL}Error: {e}{renderer.ENDC}")
+                    print("Make sure the CSV file for this certification exists in the same directory as this script.")
+                except Exception as e:
+                    print(f"{renderer.FAIL}An error occurred during the exam: {e}{renderer.ENDC}")
+                    print("The program will now return to the main menu.")
+                    continue_input = input(f"{simulator.renderer.BOLD}Wanna try again another or same certification exam? (y/N) {simulator.renderer.ENDC}").strip().upper()
+                    if continue_input != 'Y':
+                        break
+        except Exception as e:
+            print(f"{renderer.FAIL}An error occurred in the main program: {e}{renderer.ENDC}")
+            print("Please try again. If the problem persists, check your internet connection and make sure you have the necessary permissions to download NLTK data.")
 
-            while continue_input not in ['Y','N']:
-                continue_input = input(f"{simulator.renderer.BOLD}Wanna try again another or same certification exam? (y/N) {simulator.renderer.ENDC}")
-                continue_input = continue_input.strip().upper();
-
-                if(continue_input == 'Y'):
-                    end_it = False
-                elif (continue_input == 'N'):
-                    end_it = True
-                    break;
-                else:
-                    print("Invalid answer, answer 'Y' or 'N'")
-
-    except Exception as e:
-        print(f"{renderer.FAIL}An error occurred: {e}{renderer.ENDC}")
-        print("Please try again. If the problem persists, check your internet connection and make sure you have the necessary permissions to download NLTK data.")
 
 if __name__ == "__main__":
     main()

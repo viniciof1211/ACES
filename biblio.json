@@ -1,0 +1,42 @@
+{
+  "certifications": [
+    {
+      "certification": "MS-900: Microsoft 365 Certified: Fundamentals",
+      "categories": [
+        {
+          "category": "Security, Compliance, Privacy, and Trust in Microsoft 365",
+          "sources": [
+            {
+              "title": "Sign In. (2019). Microsoft Practice Test MS-900: Microsoft 365 Fundamentals.",
+              "author": "MeasureUp Inc",
+              "year": 2024,
+              "publisher": "measureup.com",
+              "doi": "https://www.measureup.com/microsoft-practice-test-ms-900-microsoft-365-fundamentals.html"
+            },
+            {
+              "title": "Microsoft 365 Fundamentals (MS-900) Cert Prep: 3 Security, Compliance, Privacy, and Trust by Microsoft Press Online Class",
+              "author": "Andrew Warren",
+              "year": 2023,
+              "publisher": "LinkedIn Learning (Lynda.com)",
+              "doi": "https://www.linkedin.com/learning/microsoft-365-fundamentals-ms-900-cert-prep-3-security-compliance-privacy-and-trust-by-microsoft-press"
+            },
+            {
+              "title": "Microsoft 365 Fundamentals: Demonstrate fundamental knowledge of Microsoft 365 security and compliance capabilities",
+              "author": "Microsoft Learn",
+              "year": 2024,
+              "publisher": "wwlpublish",
+              "doi": "https://learn.microsoft.com/en-us/training/paths/m365-security-compliance-capabilities/"
+            },
+            {
+              "title": "Microsoft 365 Fundamentals (MS-900) Cert Prep: 3 Security, Compliance, Privacy, and Trust by Microsoft Press.",
+              "author": "SEAS Office of Career Services",
+              "year": 2024,
+              "publisher": "The George Washington University",
+              "doi": "https://careers.seas.gwu.edu/classes/microsoft-365-fundamentals-ms-900-cert-prep-3-security-compliance-privacy-and-trust-by-microsoft-press/"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

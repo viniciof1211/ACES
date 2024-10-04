@@ -31,14 +31,14 @@ This project is about creating a free, effective tool for learning and preparing
 
 ## How to Contribute
 
-1. **Contact admin for any big and disruptive ideas you'd like to discuss before implementation, architecture-wise**:
+1. **Contact admin for inclusion into the Azure DevOps Project & Repo**:
 
-Send e-mail to _Flores, Vinicio <vfloreshdz@gmail.com>_
+Send e-mail to _Flores, Vinicio <v.flores.hernandez@accenture.com>_
 
 2. **Fork the Repository**: Create a personal copy of the project to work on.
    
    ```bash
-   git clone https://github.com/viniciof1211/ACES.git
+   git clone git@ssh.dev.azure.com:v3/viniciof/CertTester/ETC-CertTester
    ```
 
 ## What Happens Next?
@@ -56,4 +56,4 @@ _Happy coding!_
 
 **Remember:** The best way to learn is to do. Dive in, and let’s make something great together! 
 
-_Don't be encumbered by history, go out and make something wonderful._ - **Robert Noyce**
+_Don't be encumbered by history, go out and make something wonderful._

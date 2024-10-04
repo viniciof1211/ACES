@@ -22,18 +22,31 @@
     <InterpreterReference Include="Global|PythonCore|3.12" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="csv-validator.py" />
     <Compile Include="generate_logo.py" />
+    <Compile Include="json-validator.py" />
     <Compile Include="main-azure-certs-exam-simulator.py" />
-    <Compile Include="backup.py" />
-    <Compile Include="backup2.py" />
-    <Compile Include="scrape_az900.py" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Architecture.png" />
+    <Content Include="Architecture.webp" />
     <Content Include="az104_questions.csv" />
     <Content Include="az204_questions.csv" />
     <Content Include="az305_questions.csv" />
     <Content Include="az400_questions.csv" />
     <Content Include="az900_questions.csv" />
+    <Content Include="CHANGELOG.md" />
+    <Content Include="CONTRIBUTING.md" />
+    <Content Include="LICENSE.md" />
+    <Content Include="logo.jpg" />
+    <Content Include="logo.svg" />
+    <Content Include="ms900_questions.csv" />
+    <Content Include="pl900_questions.csv" />
+    <Content Include="README.md" />
+    <Content Include="scoring.json" />
+    <Content Include="ScoringSample.png" />
+    <Content Include="Whitepaper_Enhancing Azure Certification Preparation through Microlearning and Spaced Repetition.docx" />
+    <Content Include="Whitepaper_Enhancing Azure Certification Preparation through Microlearning and Spaced Repetition.pdf" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>

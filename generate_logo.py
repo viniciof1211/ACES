@@ -24,7 +24,7 @@ draw.ellipse([155, 155, 185, 185], fill='white', outline='#0078D4', width=2)
 draw.line([(164, 170), (170, 176), (178, 164)], fill='#0078D4', width=2)
 
 # Add the app name (Bold Italic Dark Blue)
-draw.text((100, 190), "Azure Cert\nPractice Simulator", fill='#003366', font=font, anchor="mm")
+draw.text((100, 190), "Azure DIS/ETC Cert\nPractice Simulator", fill='#003366', font=font, anchor="mm")
 
 # Save the image as JPEG to an in-memory file
 jpeg_image = io.BytesIO()
