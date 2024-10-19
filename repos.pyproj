@@ -26,6 +26,7 @@
     <Compile Include="generate_logo.py" />
     <Compile Include="json-validator.py" />
     <Compile Include="main-azure-certs-exam-simulator.py" />
+    <Compile Include="validate_python_file.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Architecture.png" />
