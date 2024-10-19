@@ -1,7 +1,8 @@
-﻿# Written by Vinicio S. Flores <v.flores.hernandez@accenture.com>
+# Written by Vinicio S. Flores <v.flores.hernandez@accenture.com>
 # Modified to include certification menu selection
 # Modified to handle semicolon-delimited CSV files
 # Copyright & under Software IP rights (intellectual-property)
+# MIT-Licensed 
 
 """
      This program simulates Microsoft Azure certification exams in multiple languages.
@@ -29,35 +30,8 @@ import spacy
 import json
 import matplotlib.pyplot as plt 
 from matplotlib import font_manager
-from PIL import Image, ImageDraw, ImageFont
 
 print("[DEBUG] Loading initial and background modules ... Please wait ....")
-
-global font 
-global writer 
-
-font_list = ['Harabara.ttf']
-font_size = 12
-
-# Generate fonts for questions
-def load_fonts():
-    global img, font, writer
-    img = Image.new('RGB', (400,200), color='black')
-    font = ImageFont.truetype(font_list[0], font_size)
-    writer = ImageDraw.Draw(img)
-
-def fprint(text, forecolour):
-    load_fonts()
-    writer.text((10,10), text, font, forecolour=forecolour)
-    # Save the image temporarily
-    temp_image_path = "temp_image.png"
-    img.save(temp_image_path)
-    # Open the image with the default image viewer
-    os.startfile(temp_image_path)
-    # Optional: Remove the temporary image file after a delay
-    time.sleep(2)  # Wait for 2 seconds
-    os.remove(temp_image_path)
-
 
 # Load the English language model
 nlp = spacy.load("en_core_web_sm")
@@ -97,7 +71,6 @@ class Languages:
         self.PORTUGUESE = 'pt'
         self.FRENCH = 'fr'
         self.JAPANESE = 'ja'
-        self.HEBREW = 'he'
         self.needs_translation = True
 
     def set_language(self, lang):
@@ -324,13 +297,13 @@ class ExamSimulator:
         categories = self.get_certification_categories()
         if not categories:
             print(f"Warning: No categories found for certification {self.certification_name}")
-            return {"Uncategorized": 0}
+            return {f"Uncategorized - Warning: No categories found for certification {self.certification_name}": 0}
         return {category: 0 for category in categories}
 
     def categorize_question(self, question_text):
         categories = self.get_certification_categories()
         if not categories or categories == ["Uncategorized"]:
-            return "Uncategorized"
+            return "Uncategorized - no categories found."
         doc = self.nlp(question_text.lower())
         # Initialize a dictionary to store keyword match counts for each category
         category_keyword_counts = {}
@@ -357,11 +330,11 @@ class ExamSimulator:
         if certification:
             categories = [cat["category"] for cat in certification.get("categories", [])]
             if not categories:
-                print(f"Warning: No categories found for certification {self.certification_name}")
-                return ["Uncategorized"]
+                # print(f"Warning: No categories found for certification {self.certification_name}")
+                return [f"Uncategorized: No categories found for certification {self.certification_name}"]
             return categories
         print(f"Error: Certification {self.certification_name} not found in the JSON data.")
-        return ["Uncategorized"]
+        return [f"Uncategorized - Error: Certification {self.certification_name} not found in the JSON data."]
 
     def analyze_nlp_for_category(self, category_name):
         certification = next((cert for cert in self.certification_data["certifications"] 
@@ -402,6 +375,7 @@ class ExamSimulator:
             if user_answer == question.correct_answer:
                 print(self.renderer.OKGREEN + self.translator.translate("\nCorrect!") + self.renderer.ENDC)
                 self.score += 1
+                print(f"{self.renderer.OKCYAN}\n[Category bucket OnVue-Proctor Scored -> .... {self.renderer.WARNING}{question.category}{self.renderer.ENDC} ] - \n")
                 self.category_scores[question.category] += 1
 
             else:
@@ -563,30 +537,6 @@ def main():
     while True:
         try:
             simulator = None
-   
-            # Commands to run in PowerShell
-            commands = [
-                '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
-                '$hebrew_text = "עִברִית"',
-                'Write-Host $hebrew_text'
-            ]
-
-            # Open PowerShell and execute commands
-            powershell_process = subprocess.Popen(["powershell"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-
-            # Run each command in PowerShell
-            for command in commands:
-                print(f"[DEBUG][main] Setting up terminal for UTF-8 languages {command} ...")
-                subprocess.run(["powershell", "-Command", command])
-                time.sleep(0.125)  # Optional: Add delay between commands for readability
-            # Optionally, close stdin to signify that we're done sending commands
-            powershell_process.stdin.close()
-            # Wait for PowerShell to complete
-            stdout, stderr = powershell_process.communicate()
-            # Print the output from PowerShell
-            print(stdout.decode('utf-8'))
-            print(stderr.decode('utf-8'))
 
             ### Interactive menu to implemented Spaced-Repetition (Leibniz Algorithm) 
             ### and microlearning tecniques.Main loop.
@@ -597,7 +547,6 @@ def main():
             print(f"{renderer.OKCYAN}3. Português{renderer.ENDC}")
             print(f"{renderer.OKCYAN}4. Français{renderer.ENDC}")
             print(f"{renderer.OKCYAN}5. 日本語{renderer.ENDC}")
-            print(f"{renderer.OKCYAN}6. עִברִית{renderer.ENDC}")
             print(f"{renderer.OKCYAN}Q. Any key to quit{renderer.ENDC}")
 
             choice = input("Enter the number corresponding to your language: ").strip()
@@ -612,8 +561,6 @@ def main():
                 lang = langs.FRENCH
             elif choice == '5':
                 lang = langs.JAPANESE
-            elif choice == '6':
-                lang = langs.HEBREW
             else:
                 print("Invalid selection or chose to quit. Exiting...")
                 sys.exit(0)
