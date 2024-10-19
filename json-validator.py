@@ -15,6 +15,7 @@ try:
         result = "JSON is valid."
 except json.JSONDecodeError as e:
     result = f"JSON syntax error: {str(data)}"
+
     print(f"[FATAL] Error {str(e.args)} at column {e.colno} and row [{e.lineno}]{result}")
 
 if(len(result) <= 0):
