@@ -237,11 +237,7 @@ class ExamSimulator:
                     correct_answer = translated_texts[i+5].upper()  # Ensure it's a string and uppercase
                     explanation = textwrap.fill(translated_texts[i+6].strip(), width=70)  # Ensure it's a string
                     question_obj = Question(question, options, correct_answer, explanation)
-                    question_obj.category = self.categorize_question(question + " | " + options[0] +
-                                                                                " | " + options[1] +
-                                                                                " | " + options[2] +
-                                                                                " | " + options[3] +
-                                                                                explanation)
+                    question_obj.category = self.categorize_question(question + " , " + explanation)
                     questions.append(question_obj)
 
                     i += 7      # Move to the next set of 7 items (Question + 6 fields)

@@ -1663,7 +1663,6 @@
           "Common Data Service",
           "Dataverse",
           "connectors",
-          "AI Builder",
           "Power Platform components",
           "integration"
           ]
@@ -1688,9 +1687,6 @@
             "formulas",
             "Power Apps portals",
             "Power Apps",
-            "Power Automate",
-            "Power BI",
-            "Power Virtual Agents",
             "Common Data Service",
             "Dataverse",
             "connectors",
@@ -1767,7 +1763,8 @@
             "process management",
             "workflow creation",
             "task scheduling",
-            "event-driven triggers"
+            "event-driven triggers",
+            "manual trigger"
 
           ]
         },
@@ -1833,11 +1830,13 @@
             "Power Automate integration",
             "multi-channel bots",
             "user interactions",
-            "chatbots",
+            "bots",
+            "AI bots",
             "conversational AI",
             "virtual agents",
             "customer support automation",
             "dialog creation",
+            "customer service",
             "chatbot deployment",
             "natural language processing",
             "bot integration",
@@ -1852,7 +1851,9 @@
             "bot customization",
             "task automation",
             "customer service",
-            "chatbot analytics"
+            "chatbot analytics",
+            "prediction",
+            "sentiment analysis"
           ]
         }
       ]
