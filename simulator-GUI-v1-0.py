@@ -81,60 +81,6 @@ class ExamResultsWidget(QWidget):
         
         self.layout.addWidget(self.results_title)
         self.layout.addWidget(self.score_label)
-
-    def create_category_chart(self, category_scores):
-        # Remove existing chart if any
-        if self.chart_view:
-            self.layout.removeWidget(self.chart_view)
-            self.chart_view.deleteLater()
-            
-        # Create chart
-        chart = QChart()
-        chart.setAnimationOptions(QChart.SeriesAnimations)
-        chart.setTitle("Category Performance Breakdown")
-        
-        # Create series and sets
-        series = QStackedBarSeries()
-        
-        # Process category scores
-        categories = []
-        correct_set = QBarSet("Correct")
-        incorrect_set = QBarSet("Incorrect")
-        
-        for category, stats in category_scores.items():
-            categories.append(category)
-            correct_set.append(stats['correct'])
-            incorrect_set.append(stats['total'] - stats['correct'])
-        
-        series.append(correct_set)
-        series.append(incorrect_set)
-        chart.addSeries(series)
-        
-        # Set up axes
-        axis_x = QBarCategoryAxis()
-        axis_x.append(categories)
-        chart.addAxis(axis_x, Qt.AlignBottom)
-        series.attachAxis(axis_x)
-        
-        axis_y = QValueAxis()
-        max_questions = max([stats['total'] for stats in category_scores.values()])
-        axis_y.setRange(0, max_questions)
-        axis_y.setTitleText("Number of Questions")
-        chart.addAxis(axis_y, Qt.AlignLeft)
-        series.attachAxis(axis_y)
-        
-        # Customize appearance
-        chart.setTheme(QChart.ChartThemeLight)
-        chart.legend().setVisible(True)
-        chart.legend().setAlignment(Qt.AlignBottom)
-        
-        # Create chart view
-        self.chart_view = QChartView(chart)
-        self.chart_view.setRenderHint(QPainter.Antialiasing)
-        self.chart_view.setMinimumHeight(400)
-        
-        # Add to layout
-        self.layout.addWidget(self.chart_view)
     
     def create_results_screen(self):
         self.results_widget = QWidget()
@@ -494,6 +440,61 @@ class ExamSimulatorGUI(QMainWindow):
         self.stacked_widget.addWidget(self.results_widget)
         
         self.stacked_widget.addWidget(self.results_widget)
+
+    def create_category_chart(self, category_scores):
+        # Remove existing chart if any
+        if self.chart_view:
+            self.layout.removeWidget(self.chart_view)
+            self.chart_view.deleteLater()
+            
+        # Create chart
+        chart = QChart()
+        chart.setAnimationOptions(QChart.SeriesAnimations)
+        chart.setTitle("Category Performance Breakdown")
+        
+        # Create series and sets
+        series = QStackedBarSeries()
+        
+        # Process category scores
+        categories = []
+        correct_set = QBarSet("Correct")
+        incorrect_set = QBarSet("Incorrect")
+        
+        for category, stats in category_scores.items():
+            categories.append(category)
+            correct_set.append(stats['correct'])
+            incorrect_set.append(stats['total'] - stats['correct'])
+        
+        series.append(correct_set)
+        series.append(incorrect_set)
+        chart.addSeries(series)
+        
+        # Set up axes
+        axis_x = QBarCategoryAxis()
+        axis_x.append(categories)
+        chart.addAxis(axis_x, Qt.AlignBottom)
+        series.attachAxis(axis_x)
+        
+        axis_y = QValueAxis()
+        max_questions = max([stats['total'] for stats in category_scores.values()])
+        axis_y.setRange(0, max_questions)
+        axis_y.setTitleText("Number of Questions")
+        chart.addAxis(axis_y, Qt.AlignLeft)
+        series.attachAxis(axis_y)
+        
+        # Customize appearance
+        chart.setTheme(QChart.ChartThemeLight)
+        chart.legend().setVisible(True)
+        chart.legend().setAlignment(Qt.AlignBottom)
+        
+        # Create chart view
+        self.chart_view = QChartView(chart)
+        self.chart_view.setRenderHint(QPainter.Antialiasing)
+        self.chart_view.setMinimumHeight(400)
+        
+        # Add to layout
+        self.layout.addWidget(self.chart_view)
+
 
     def show_results(self):
         self.exam_in_progress = False  # Reset the flag when showing results
