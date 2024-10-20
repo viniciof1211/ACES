@@ -57,89 +57,6 @@ def download_nltk_data():
 download_nltk_data()
 nltk.data.path.append('C:/nltk_data')  # Add your NLTK data path manually
 
-class ExamResultsWidget(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.layout = QVBoxLayout(self)
-        
-        # Initialize components
-        self.results_title = QLabel()
-        self.score_label = QLabel()
-        self.chart_view = None
-        self.setup_ui()
-        
-    def setup_ui(self):
-        # Configure title and score labels
-        title_font = QFont()
-        title_font.setPointSize(16)
-        title_font.setBold(True)
-        self.results_title.setFont(title_font)
-        
-        score_font = QFont()
-        score_font.setPointSize(12)
-        self.score_label.setFont(score_font)
-        
-        self.layout.addWidget(self.results_title)
-        self.layout.addWidget(self.score_label)
-    
-    def create_results_screen(self):
-        self.results_widget = QWidget()
-        layout = QVBoxLayout(self.results_widget)
-
-        # Scrollable area for results
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll_content = QWidget()
-        scroll_layout = QVBoxLayout(scroll_content)
-
-        self.results_title = QLabel()
-        self.results_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.results_title.setFont(QFont('Arial', 16, QFont.Weight.Bold))
-        scroll_layout.addWidget(self.results_title)
-
-        self.score_label = QLabel()
-        self.score_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        scroll_layout.addWidget(self.score_label)
-
-        # Create chart widget container
-        self.chart_container = QWidget()
-        self.chart_layout = QVBoxLayout(self.chart_container)
-        scroll_layout.addWidget(self.chart_container)
-
-        # Detailed category breakdown
-        self.category_details = QLabel()
-        self.category_details.setWordWrap(True)
-        scroll_layout.addWidget(self.category_details)
-
-        scroll.setWidget(scroll_content)
-        layout.addWidget(scroll)
-
-        # Buttons
-        btn_layout = QHBoxLayout()
-        retry_btn = QPushButton("Try Again")
-        retry_btn.clicked.connect(self.restart_exam)
-        new_exam_btn = QPushButton("New Exam")
-        new_exam_btn.clicked.connect(self.select_new_exam)
-        btn_layout.addWidget(retry_btn)
-        btn_layout.addWidget(new_exam_btn)
-        layout.addLayout(btn_layout)
-
-        self.stacked_widget.addWidget(self.results_widget)
-
-    def get_category_details(self, category_scores):
-        details = []
-        for category, stats in category_scores.items():
-            percentage = (stats['correct'] / stats['total']) * 100
-            details.append(f"{category}:")
-            details.append(f"  Correct: {stats['correct']}/{stats['total']} ({percentage:.1f}%)")
-            if 'questions' in stats:
-                details.append("  Questions:")
-                for q in stats['questions']:
-                    status = "✓" if q['correct'] else "✗"
-                    details.append(f"    {status} {q['question']}")
-            details.append("")
-        return "\n".join(details)
-
 # Ensure NLTK data is downloaded
 try:
     nltk.data.find('tokenizers/punkt')
@@ -194,6 +111,11 @@ class ExamSimulatorGUI(QMainWindow):
         self.init_ui()
         self.load_certification_data()
         self.exam_in_progress = False  # Add this flag
+        # Initialize components
+        self.results_title = QLabel()
+        self.score_label = QLabel()
+        self.chart_view = None
+        self.setup_ui()
 
         print(f"{renderer.WARNING}")
 
