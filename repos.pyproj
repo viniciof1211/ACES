@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{1f34c65a-8a3b-4047-bb7e-599362316017}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>main-azure-certs-exam-simulator.py</StartupFile>
+    <StartupFile>simulator-GUI-v1-0.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -26,6 +26,7 @@
     <Compile Include="generate_logo.py" />
     <Compile Include="json-validator.py" />
     <Compile Include="main-azure-certs-exam-simulator.py" />
+    <Compile Include="simulator-GUI-v1-0.py" />
     <Compile Include="validate_python_file.py" />
   </ItemGroup>
   <ItemGroup>

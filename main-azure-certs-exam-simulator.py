@@ -591,17 +591,17 @@ def main():
 
             if choice in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11']:
                 cert_map = {
-                    '1': ('az900_questions.csv', "AZ-900: Microsoft Azure Fundamentals"),
-                    '2': ('az104_questions.csv', "AZ-104: Microsoft Azure Administrator"),
-                    '3': ('az204_questions.csv', "AZ-204: Developing Solutions for Microsoft Azure"),
-                    '4': ('az305_questions.csv', "AZ-305: Designing Microsoft Azure Infrastructure Solutions"),
-                    '5': ('az400_questions.csv', "AZ-400: Designing and Implementing Microsoft DevOps Solutions"),
-                    '6': ('az500_questions.csv', "AZ-500: Microsoft Azure Security Technologies"),
-                    '7': ('az700_questions.csv', "AZ-700: Designing and Implementing Microsoft Azure Networking Solutions"),
-                    '8': ('az800_questions.csv', "AZ-800: Administering Windows Server Hybrid Core Infrastructure"),
-                    '9': ('az140_questions.csv', "AZ-140: Configuring and Operating Microsoft Azure Virtual Desktop"),
-                    '10': ('ms900_questions.csv', "MS-900: Microsoft 365 Certified: Fundamentals"),
-                    '11': ('pl900_questions.csv', "PL-900: Microsoft Certified: Power Platform Fundamentals")
+                    '1': ('az-900_questions.csv', "AZ-900: Microsoft Azure Fundamentals"),
+                    '2': ('az-104_questions.csv', "AZ-104: Microsoft Azure Administrator"),
+                    '3': ('az-204_questions.csv', "AZ-204: Developing Solutions for Microsoft Azure"),
+                    '4': ('az-305_questions.csv', "AZ-305: Designing Microsoft Azure Infrastructure Solutions"),
+                    '5': ('az-400_questions.csv', "AZ-400: Designing and Implementing Microsoft DevOps Solutions"),
+                    '6': ('az-500_questions.csv', "AZ-500: Microsoft Azure Security Technologies"),
+                    '7': ('az-700_questions.csv', "AZ-700: Designing and Implementing Microsoft Azure Networking Solutions"),
+                    '8': ('az-800_questions.csv', "AZ-800: Administering Windows Server Hybrid Core Infrastructure"),
+                    '9': ('az-140_questions.csv', "AZ-140: Configuring and Operating Microsoft Azure Virtual Desktop"),
+                    '10': ('ms-900_questions.csv', "MS-900: Microsoft 365 Certified: Fundamentals"),
+                    '11': ('pl-900_questions.csv', "PL-900: Microsoft Certified: Power Platform Fundamentals")
                 }
                 questions_input_file, cert_name = cert_map[choice]
 
