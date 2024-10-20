@@ -115,7 +115,6 @@ class ExamSimulatorGUI(QMainWindow):
         self.results_title = QLabel()
         self.score_label = QLabel()
         self.chart_view = None
-        self.setup_ui()
 
         print(f"{renderer.WARNING}")
 
