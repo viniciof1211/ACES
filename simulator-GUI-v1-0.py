@@ -14,7 +14,7 @@ from PyQt6.QtCharts import QChart, QChartView, QBarSet, QStackedBarSeries, QBarC
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPainter, QFont
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QPalette, QColor
+from PyQt6.QtGui import QFont, QPalette, QColor, QIcon
 
 print("[DEBUG] Loading initial and background modules ... Please wait ....")
 
@@ -70,6 +70,7 @@ class Languages:
         self.PORTUGUESE = 'pt'
         self.FRENCH = 'fr'
         self.JAPANESE = 'ja'
+        self.HEBREW = 'he'
         self.needs_translation = True
         self.translator = None
 
@@ -101,26 +102,44 @@ class Question:
 class ExamSimulatorGUI(QMainWindow):
     def __init__(self):
         super().__init__()
-         # Initialize attributes before creating UI
+        # Initialize spaCy model
+        self.nlp = spacy.load("en_core_web_sm")
+        # Initialize attributes before creating UI
         self.langs = Languages()
         self.questions = []
         self.current_question = 0
         self.score = 0
+        # Initialize category_scores as a dictionary with proper structure
         self.category_scores = {}
-        # Create UI elements
-        self.init_ui()
-        self.load_certification_data()
-        self.exam_in_progress = False  # Add this flag
         # Initialize components
         self.results_title = QLabel()
         self.score_label = QLabel()
+        self.certification_title = QLabel()
         self.chart_view = None
+        self.cert_name = ""
+        # Create UI elements
+        self.load_certification_data()
+        self.exam_in_progress = False
+        self.init_ui()
 
-        print(f"{renderer.WARNING}")
+    def init_results_ui(self, layout):
+        # Configure title and score labels
+        title_font = QFont()
+        title_font.setPointSize(16)
+        title_font.setBold(True)
+        self.results_title.setFont(title_font)
+        
+        score_font = QFont()
+        score_font.setPointSize(12)
+        self.score_label.setFont(score_font)
+        
+        layout.addWidget(self.results_title)
+        layout.addWidget(self.score_label)
 
     def init_ui(self):
         self.setWindowTitle('Microsoft/ETC Certification Exams Simulator')
         self.setMinimumSize(800, 600)
+        self.setWindowIcon(QIcon('logo.jpg'))
 
         # Create central widget and main layout
         central_widget = QWidget()
@@ -153,7 +172,8 @@ class ExamSimulatorGUI(QMainWindow):
             ("Español", self.langs.SPANISH),
             ("Português", self.langs.PORTUGUESE),
             ("Français", self.langs.FRENCH),
-            ("日本語", self.langs.JAPANESE)
+            ("日本語", self.langs.JAPANESE),
+            ("עִברִית", self.langs.HEBREW)
         ]
 
         for lang_name, lang_code in languages:
@@ -184,7 +204,8 @@ class ExamSimulatorGUI(QMainWindow):
             "AZ-800: Administering Windows Server Hybrid Core Infrastructure",
             "AZ-140: Configuring and Operating Microsoft Azure Virtual Desktop",
             "MS-900: Microsoft 365 Certified: Fundamentals",
-            "PL-900: Microsoft Certified: Power Platform Fundamentals"
+            "PL-900: Microsoft Certified: Power Platform Fundamentals",
+            "SC-900: Microsoft Security, Compliance, and Identity Fundamentals"
         ])
         layout.addWidget(self.cert_combo)
 
@@ -195,10 +216,21 @@ class ExamSimulatorGUI(QMainWindow):
         self.stacked_widget.addWidget(cert_widget)       
 
     def initialize_category_scores(self):
+        # Reset category scores at the start of each exam
+        self.category_scores = {}
+        # Get categories for the current certification
         categories = self.get_certification_categories()
+        # Initialize scores for each category
+        for category in categories:
+            self.category_scores[category] = {
+                'correct': 0,
+                'total': 0,
+                'questions': []
+            }
+
         if not categories:
-            print(f"Warning: No categories found for certification {self.certification_name}")
-            return {f"Uncategorized - Warning: No categories found for certification {self.certification_name}": 0}
+            print(f"Warning: No categories found for certification {self.cert_name}")
+            return {f"Uncategorized - Warning: No categories found for certification {self.cert_name}": 0}
         return {category: 0 for category in categories}
 
     def categorize_question(self, question_text):
@@ -210,7 +242,7 @@ class ExamSimulatorGUI(QMainWindow):
         category_keyword_counts = {}
         # Iterate over all categories loaded for the current certification
         for cert in self.certification_data["certifications"]:
-            if cert['certification'] == self.certification_name:
+            if cert['certification'] == self.cert_name:
                 for category in cert['categories']:
                     # Count keyword matches
                     keywords = category['keywords']
@@ -227,19 +259,19 @@ class ExamSimulatorGUI(QMainWindow):
             print("Error: Certification data not loaded.")
             return []
         certification = next((cert for cert in self.certification_data.get("certifications", []) 
-                              if cert["certification"] == self.certification_name), None)
+                              if cert["certification"] == self.cert_name), None)
         if certification:
             categories = [cat["category"] for cat in certification.get("categories", [])]
             if not categories:
-                # print(f"Warning: No categories found for certification {self.certification_name}")
-                return [f"Uncategorized: No categories found for certification {self.certification_name}"]
+                # print(f"Warning: No categories found for certification {self.cert_name}")
+                return [f"Uncategorized: No categories found for certification {self.cert_name}"]
             return categories
-        print(f"Error: Certification {self.certification_name} not found in the JSON data.")
-        return [f"Uncategorized - Error: Certification {self.certification_name} not found in the JSON data."]
+        print(f"Error: Certification {self.cert_name} not found in the JSON data.")
+        return [f"Uncategorized - Error: Certification {self.cert_name} not found in the JSON data."]
 
     def analyze_nlp_for_category(self, category_name):
         certification = next((cert for cert in self.certification_data["certifications"] 
-                              if cert["certification"] == self.certification_name), None)
+                              if cert["certification"] == self.cert_name), None)
         if certification:
             category = next((cat for cat in certification["categories"] 
                              if cat["category"] == category_name), None)
@@ -247,33 +279,22 @@ class ExamSimulatorGUI(QMainWindow):
                 return category.get("keywords", [])
         return None
 
-    def confirm_abort(self):
-        """Show confirmation dialog before aborting the exam"""
-        reply = QMessageBox.question(
-            self, 
-            'Confirm Abort',
-            'Are you sure you want to abort the exam? This will end the exam and show your current results.',
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
-        
-        if reply == QMessageBox.StandardButton.Yes:
-            # Mark remaining questions as incorrect
-            for i in range(self.current_question, len(self.questions)):
-                question = self.questions[i]
-                question.user_answer = 'X'  # Mark as incorrect
-            
-            # Show results immediately
-            self.show_results()
-
     def create_exam_screen(self):
         exam_widget = QWidget()
         layout = QVBoxLayout(exam_widget)
+
+        # Certification Title + Microsoft Code
+        self.certification_title = QLabel()
+        self.certification_title.setWordWrap(False)
+        self.certification_title.setFont(QFont('Times New Roman', 24, QFont.Weight.Bold))
+        self.certification_title.setText(self.cert_name)
+        self.certification_title
 
         # Question number and progress
         self.progress_layout = QHBoxLayout()
         self.question_number_label = QLabel()
         self.progress_bar = QProgressBar()
+        self.progress_layout.addWidget(self.certification_title)
         self.progress_layout.addWidget(self.question_number_label)
         self.progress_layout.addWidget(self.progress_bar)
         layout.addLayout(self.progress_layout)
@@ -298,6 +319,11 @@ class ExamSimulatorGUI(QMainWindow):
         self.submit_btn.clicked.connect(self.check_answer)
         layout.addWidget(self.submit_btn)
 
+        # Next Question (advance) button
+        self.next_btn = QPushButton("Next >>")
+        self.next_btn.clicked.connect(self.next_question)
+        layout.addWidget(self.next_btn)
+
          # Abort button
         self.quit_btn = QPushButton("Abort Test")
         self.quit_btn.clicked.connect(self.confirm_abort)  # Connect directly to confirm & abort method
@@ -320,6 +346,9 @@ class ExamSimulatorGUI(QMainWindow):
         scroll.setWidgetResizable(True)
         scroll_content = QWidget()
         scroll_layout = QVBoxLayout(scroll_content)
+
+        # Initialize results UI with the correct layout
+        self.init_results_ui(scroll_layout)
 
         # Results title
         self.results_title = QLabel()
@@ -359,86 +388,172 @@ class ExamSimulatorGUI(QMainWindow):
         layout.addLayout(btn_layout)
 
         self.stacked_widget.addWidget(self.results_widget)
-        
-        self.stacked_widget.addWidget(self.results_widget)
 
-    def create_category_chart(self, category_scores):
-        # Remove existing chart if any
-        if self.chart_view:
-            self.layout.removeWidget(self.chart_view)
-            self.chart_view.deleteLater()
+    def load_certification_data(self):
+        try:
+            with open('scoring.json', 'r') as f:
+                self.certification_data = json.load(f)
+        except Exception as e:
+            print(f"Error loading certification data: {e}")
+            self.certification_data = None
+
+    def select_language(self, lang_code):
+        self.langs.set_language(lang_code)
+        self.langs.current_lang = lang_code
+        self.stacked_widget.setCurrentIndex(1)
+
+    def start_exam(self):
+        self.cert_name = self.cert_combo.currentText()
+        csv_file = f"{self.cert_name.split(':')[0].lower()}_questions.csv"
+
+        try:
+            self.load_questions(csv_file)
+            # Initialize category scores when starting exam
+            self.initialize_category_scores()
+            self.current_question = 0
+            self.score = 0
+            self.exam_in_progress = True
+            self.show_question()
+            self.stacked_widget.setCurrentIndex(2)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load exam questions: {e}")
+
+    def load_questions(self, csv_file):
+        self.questions = []
+        try:
+            with open(csv_file, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f, delimiter=';')
+                next(reader)  # Skip header
+                for row in reader:
+                    question = Question(
+                        question=row[0],
+                        options=[row[1], row[2], row[3], row[4]],
+                        correct_answer=row[5],
+                        explanation=row[6]
+                    )
+                    self.questions.append(question)
+            random.shuffle(self.questions)
+        except Exception as e:
+            raise Exception(f"Error loading questions: {e}")
+
+    def show_question(self):
+        if self.current_question < len(self.questions):
+            question = self.questions[self.current_question]
             
-        # Create chart
-        chart = QChart()
-        chart.setAnimationOptions(QChart.SeriesAnimations)
-        chart.setTitle("Category Performance Breakdown")
-        
-        # Create series and sets
-        series = QStackedBarSeries()
-        
-        # Process category scores
-        categories = []
-        correct_set = QBarSet("Correct")
-        incorrect_set = QBarSet("Incorrect")
-        
-        for category, stats in category_scores.items():
-            categories.append(category)
-            correct_set.append(stats['correct'])
-            incorrect_set.append(stats['total'] - stats['correct'])
-        
-        series.append(correct_set)
-        series.append(incorrect_set)
-        chart.addSeries(series)
-        
-        # Set up axes
-        axis_x = QBarCategoryAxis()
-        axis_x.append(categories)
-        chart.addAxis(axis_x, Qt.AlignBottom)
-        series.attachAxis(axis_x)
-        
-        axis_y = QValueAxis()
-        max_questions = max([stats['total'] for stats in category_scores.values()])
-        axis_y.setRange(0, max_questions)
-        axis_y.setTitleText("Number of Questions")
-        chart.addAxis(axis_y, Qt.AlignLeft)
-        series.attachAxis(axis_y)
-        
-        # Customize appearance
-        chart.setTheme(QChart.ChartThemeLight)
-        chart.legend().setVisible(True)
-        chart.legend().setAlignment(Qt.AlignBottom)
-        
-        # Create chart view
-        self.chart_view = QChartView(chart)
-        self.chart_view.setRenderHint(QPainter.Antialiasing)
-        self.chart_view.setMinimumHeight(400)
-        
-        # Add to layout
-        self.layout.addWidget(self.chart_view)
+            # Update progress bar according to # total question of cert's assessment
+            self.question_number_label.setText(f"Question {self.current_question + 1}/{len(self.questions)}")
+            self.progress_bar.setValue(int((self.current_question / len(self.questions)) * 100))
 
+            # Show question
+            self.question_label.setText(self.langs.translate(question.question))
+            
+            # Show options
+            for i, option in enumerate(question.options):
+                self.answer_buttons[i].setText(self.langs.translate(option))
+
+            # Reset state
+            self.answer_group.setExclusive(True)
+            for button in self.answer_buttons:
+                button.setChecked(False)
+            self.explanation_label.hide()
+            self.submit_btn.setEnabled(True)
+            self.quit_btn.setEnabled(True)
+
+            # If we reach the end of the exam ... no need to display "Next question" Button
+
+            if self.current_question >= len(self.questions):
+                self.next_btn.setEnabled(False)
+                self.next_btn.hide()
+            else:
+                self.next_btn.setEnabled(True)
+                self.next_btn.show()
+
+    def check_answer(self):
+        if not self.answer_group.checkedButton():
+            QMessageBox.warning(self, "Warning", "Please select an answer")
+            return
+
+        question = self.questions[self.current_question]
+        selected_answer = chr(65 + self.answer_group.checkedId())  # Convert to A, B, C, D
+
+        # Determine the question's category
+        category = self.categorize_question(question.question)
+        
+        # Ensure category exists in scores
+        if category not in self.category_scores:
+            self.category_scores[category] = {
+                'correct': 0,
+                'total': 0,
+                'questions': []
+            }
+
+        # Update category scores
+        self.category_scores[category]['total'] += 1
+        if selected_answer == question.correct_answer:
+            self.score += 1
+            self.category_scores[category]['correct'] += 1
+            result_text = f"Correct!"
+            color = "green"
+        else:
+            result_text = f"Incorrect. The correct answer was {question.correct_answer}."
+            color = "red"
+
+        # Store question details
+        self.category_scores[category]['questions'].append({
+            'question': question.question,
+            'correct': selected_answer == question.correct_answer
+        })
+
+        self.explanation_label.setText(
+            f"<p style='color: {color}'>{result_text}</p>"
+            f"<p><b>Explanation:</b> {self.langs.translate(question.explanation)}</p>"
+        )
+        self.explanation_label.show()
+        self.submit_btn.setEnabled(False)
+        self.quit_btn.setEnabled(True)
+
+        # Wait 60 seconds before moving to next question - if user hasn't clicked "next >>" btn
+        # QTimer.singleShot(60000, self.next_question)
+
+    def next_question(self):
+        self.current_question += 1
+        if self.current_question < len(self.questions):
+            self.show_question()
+        else:
+            self.show_results()
+
+    def restart_exam(self):
+        self.current_question = 0
+        self.score = 0
+        random.shuffle(self.questions)
+        self.show_question()
+        self.stacked_widget.setCurrentIndex(2)
+
+    def select_new_exam(self):
+        self.stacked_widget.setCurrentIndex(1)
+
+    def clear_chart_layout(self):
+        # Safely clear all widgets from the chart layout
+        if hasattr(self, 'chart_layout'):
+            while self.chart_layout.count():
+                item = self.chart_layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
 
     def show_results(self):
-        self.exam_in_progress = False  # Reset the flag when showing results
-        # Calculate overall score including aborted questions
-        attempted_questions = self.current_question + 1
-        total_questions = len(self.questions)
         # Calculate overall score
-        percentage = (self.score / len(self.questions)) * 1000
+        percentage = (self.score / len(self.questions)) * 1000 # Microsoft/OnVue scoring system
         passed = percentage >= 700
     
         # Update title and overall score
         self.results_title.setText("Exam Results")
-
-        # Add abort information if exam was aborted
-        if self.current_question < len(self.questions) - 1:
-            abort_text = f"\nExam Aborted: {attempted_questions}/{total_questions} questions attempted"
-        else:
-            abort_text = ""
-
         self.score_label.setText(
-            f"Final Score: {self.score}/{total_questions} ({percentage:.2f}/1000){abort_text}\n"
-            f"<span style='color: {'green' if passed else 'red'};'>{'PASS' if passed else 'FAIL'}</span>"
+            f"Final Score: {self.score}/{len(self.questions)} ({percentage:.2f}/1000)\n"
+            f"{'PASS' if percentage >= 700 else 'FAIL'}"
         )
+
+        # Create and display the stacked chart
+        self.create_category_chart(self.category_scores)
 
         # Clear previous chart if exists
         for i in reversed(range(self.chart_layout.count())): 
@@ -514,130 +629,137 @@ class ExamSimulatorGUI(QMainWindow):
             details_text += f"<p><b>{category}</b>: {correct}/{total} ({cat_percentage:.1f}%)</p>"
 
         self.category_details.setText(details_text)
+    
         # Switch to results screen
         self.stacked_widget.setCurrentIndex(3)
-        # Create and display the stacked chart
-        self.create_category_chart(category_scores)
-        # Exit after 15 seconds
-        QTimer.singleShot(15000, lambda: sys.exit(0))
 
-    def load_certification_data(self):
-        try:
-            with open('scoring.json', 'r') as f:
-                self.certification_data = json.load(f)
-        except Exception as e:
-            print(f"Error loading certification data: {e}")
-            self.certification_data = None
-
-    def select_language(self, lang_code):
-        self.langs.set_language(lang_code)
-        self.langs.current_lang = lang_code
-        self.stacked_widget.setCurrentIndex(1)
-
-    def start_exam(self):
-        cert_name = self.cert_combo.currentText()
-        csv_file = f"{cert_name.split(':')[0].lower()}_questions.csv"
-
-        try:
-            self.load_questions(csv_file)
-            self.current_question = 0
-            self.score = 0
-            self.exam_in_progress = True # Set this flag when exam begins
-            self.show_question()
-            self.stacked_widget.setCurrentIndex(2)
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to load exam questions: {e}")
-
-    def load_questions(self, csv_file):
-        self.questions = []
-        try:
-            with open(csv_file, 'r', encoding='utf-8') as f:
-                reader = csv.reader(f, delimiter=';')
-                next(reader)  # Skip header
-                for row in reader:
-                    question = Question(
-                        question=row[0],
-                        options=[row[1], row[2], row[3], row[4]],
-                        correct_answer=row[5],
-                        explanation=row[6]
-                    )
-                    self.questions.append(question)
-            random.shuffle(self.questions)
-        except Exception as e:
-            raise Exception(f"Error loading questions: {e}")
-
-    def show_question(self):
-        if self.current_question < len(self.questions):
-            question = self.questions[self.current_question]
-            
-            # Update progress
-            self.question_number_label.setText(f"Question {self.current_question + 1}/{len(self.questions)}")
-            self.progress_bar.setValue(int((self.current_question / len(self.questions)) * 100))
-
-            # Show question
-            self.question_label.setText(self.langs.translate(question.question))
-            
-            # Show options
-            for i, option in enumerate(question.options):
-                self.answer_buttons[i].setText(self.langs.translate(option))
-
-            # Reset state
-            self.answer_group.setExclusive(True)
-            for button in self.answer_buttons:
-                button.setChecked(False)
-            self.explanation_label.hide()
-            self.submit_btn.setEnabled(True)
-            self.quit_btn.setEnabled(False)
-
-    def check_answer(self):
-        if not self.answer_group.checkedButton():
-            QMessageBox.warning(self, "Warning", "Please select an answer")
+        """Create and display the category performance chart"""
+    def create_category_chart(self, category_scores):
+        # Safety check for empty category scores
+        if not category_scores:
+            print("Warning: No category scores available")
             return
 
-        question = self.questions[self.current_question]
-        selected_answer = chr(65 + self.answer_group.checkedId())  # Convert to A, B, C, D
+         # Remove existing chart if any
+        if hasattr(self, 'chart_view') and self.chart_view is not None:
+            self.chart_view.deleteLater()
 
-        if selected_answer == question.correct_answer:
-            self.score += 1
-            result_text = f"Correct!"
-            color = "green"
-        else:
-            result_text = f"Incorrect. The correct answer was {question.correct_answer}."
-            color = "red"
+        # Create chart
+        chart = QChart()
+        chart.setAnimationOptions(QChart.AnimationOption.SeriesAnimations)
+        chart.setTitle("Category Performance Breakdown")
 
-        self.explanation_label.setText(
-            f"<p style='color: {color}'>{result_text}</p>"
-            f"<p><b>Explanation:</b> {self.langs.translate(question.explanation)}</p>"
+        # Create series & sets
+        series = QStackedBarSeries()
+
+        # Process category scores
+        categories = []
+        correct_set = QBarSet("Correct")
+        incorrect_set = QBarSet("Incorrect")
+
+        for category, stats in category_scores.items():
+            if stats['total'] > 0: # Only include categories with questions
+                categories.append(category)
+                correct_set.append(stats['correct'])
+                incorrect_set.append(stats['total'] - stats['correct'])
+
+        # Exception handling for empty categories
+        if not categories:
+            print(f"{renderer.WARNING}[WARNING] No valid categories with questions found{renderer.ENDC}")
+            return
+
+        series.append(correct_set)
+        series.append(incorrect_set)
+        chart.addSeries(series)
+
+        # Setup axes
+        axis_x = QBarCategoryAxis()
+        axis_x.append(categories)
+        chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
+        series.attachAxis(axis_x)
+
+        axis_y = QValueAxis()
+        max_questions = max([stats['total'] for stats in category_scores.values()])
+        axis_y.setRange(0, max_questions)
+        axis_y.setTitleText("Number of Questions")
+        chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
+        series.attachAxis(axis_y)
+
+        # Customize appearance
+        chart.setTheme(QChart.ChartTheme.ChartThemeLight)
+        chart.legend().setVisible(True)
+        chart.legend().setAlignment(Qt.AlignmentFlag.AlignBottom)
+
+        # Create chart view
+        self.chart_view = QChartView(chart)
+        self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.chart_view.setMinimumHeight(400)
+
+        # Add to the layout
+        self.chart_layout.addWidget(self.chart_view)
+
+    def get_category_details(self, category_scores):
+        details = []
+        for category, stats in category_scores.items():
+            percentage = (stats['correct'] / stats['total']) * 100
+            details.append(f"{category}:")
+            details.append(f"  Correct: {stats['correct']}/{stats['total']} ({percentage:.1f}%)")
+            if 'questions' in stats:
+                details.append("  Questions:")
+                for q in stats['questions']:
+                    status = "✓" if q['correct'] else "✗"
+                    details.append(f"    {status} {q['question']}")
+            details.append("")
+        return "\n".join(details)
+
+    """Show confirmation dialog before aborting the exam"""
+    def confirm_abort(self):
+        reply = QMessageBox.question(
+            self, 
+            'Confirm Abort',
+            'Are you sure you want to abort the exam? This will end the exam and show your current results.',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
         )
-        self.explanation_label.show()
-        self.submit_btn.setEnabled(False)
-        self.quit_btn.setEnabled(True)
-
-        # Wait 5 seconds before moving to next question
-        QTimer.singleShot(5000, self.next_question)
-
-    def next_question(self):
-        self.current_question += 1
-        if self.current_question < len(self.questions):
-            self.show_question()
-        else:
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # Mark remaining questions as incorrect or unanswered
+            for i in range(self.current_question, len(self.questions)):
+                self.questions[i].user_answer = None
             self.show_results()
+            # Show results for 30 seconds, then quit app
+            QTimer.singleShot(30000, sys.exit(0))
 
-    def restart_exam(self):
-        self.current_question = 0
-        self.score = 0
-        random.shuffle(self.questions)
-        self.show_question()
-        self.stacked_widget.setCurrentIndex(2)
-
-    def select_new_exam(self):
-        self.stacked_widget.setCurrentIndex(1)
+#############################################################################
+############## MAIN ENTRY POINT #############################################
+#############################################################################
 
 if __name__ == '__main__':
+
+
+    """
+
+        Main entry point of the program
+        Manages the overall flow of the exam simulation process
+
+        User selects language and certification
+        This allows for a personalized exam experience
+
+        Exam simulation is initiated
+        The user goes through the exam process
+
+        Results are displayed and the user is given the option to retry
+        Provides immediate feedback and encourages continued learning
+
+    """
+
+
+
     app = QApplication(sys.argv)
     
     # Set application style
     app.setStyle('Fusion')
+    app.setWindowIcon(QIcon('logo.jpg'))
     
     # Create dark palette
     dark_palette = QPalette()

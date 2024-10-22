@@ -32,11 +32,6 @@
   <ItemGroup>
     <Content Include="Architecture.png" />
     <Content Include="Architecture.webp" />
-    <Content Include="az104_questions.csv" />
-    <Content Include="az204_questions.csv" />
-    <Content Include="az305_questions.csv" />
-    <Content Include="az400_questions.csv" />
-    <Content Include="az900_questions.csv" />
     <Content Include="CHANGELOG.md" />
     <Content Include="CONTRIBUTING.md" />
     <Content Include="LICENSE.md" />
