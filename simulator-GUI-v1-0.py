@@ -111,6 +111,8 @@ class ExamSimulatorGUI(QMainWindow):
         self.score = 0
         # Initialize category_scores as a dictionary with proper structure
         self.category_scores = {}
+        self.certification_data = {}
+        self.load_certification_data()
         # Initialize components
         self.results_title = QLabel()
         self.score_label = QLabel()
@@ -118,7 +120,6 @@ class ExamSimulatorGUI(QMainWindow):
         self.chart_view = None
         self.cert_name = ""
         # Create UI elements
-        self.load_certification_data()
         self.exam_in_progress = False
         self.init_ui()
 
@@ -234,40 +235,68 @@ class ExamSimulatorGUI(QMainWindow):
         return {category: 0 for category in categories}
 
     def categorize_question(self, question_text):
-        categories = self.get_certification_categories()
-        if not categories or categories == ["Uncategorized"]:
-            return "Uncategorized - no categories found."
-        doc = self.nlp(question_text.lower())
-        # Initialize a dictionary to store keyword match counts for each category
-        category_keyword_counts = {}
-        # Iterate over all categories loaded for the current certification
-        for cert in self.certification_data["certifications"]:
-            if cert['certification'] == self.cert_name:
-                for category in cert['categories']:
-                    # Count keyword matches
-                    keywords = category['keywords']
-                    count = sum(1 for token in doc if any(keyword.lower() in token.text for keyword in keywords))
-                    # Store the count for this category
-                    category_keyword_counts[category['category']] = count
-        # Find the category with the highest keyword match count
-        best_category = max(category_keyword_counts, key=category_keyword_counts.get)
-        # Return the category with the most keyword matches
-        return best_category
+        """
+        Improved question categorization with better error handling
+        """
+        try:
+            categories = self.get_certification_categories()
+            if not categories or categories == ["Uncategorized"]:
+                return "Uncategorized"
+
+            doc = self.nlp(question_text.lower())
+        
+            # Initialize a dictionary to store keyword match counts for each category
+            category_keyword_counts = {}
+        
+            # Find the certification in the data
+            cert_found = False
+            for cert in self.certification_data.get("certifications", []):
+                if cert['certification'] == self.cert_name:
+                    cert_found = True
+                    # Count keyword matches for each category
+                    for category in cert.get('categories', []):
+                        category_name = category.get('category', '').strip()
+                        keywords = category.get('keywords', [])
+                        count = sum(1 for token in doc if any(keyword.lower() in token.text for keyword in keywords))
+                        category_keyword_counts[category_name] = count
+
+            if not cert_found or not category_keyword_counts:
+                return "General Questions"
+
+            # Find the category with the highest keyword match count
+            best_category = max(category_keyword_counts.items(), key=lambda x: x[1])[0]
+            return best_category if best_category else "General Questions"
+
+        except Exception as e:
+            print(f"Error in categorize_question: {e}")
+            return "General Questions"
 
     def get_certification_categories(self):
-        if not self.certification_data:
-            print("Error: Certification data not loaded.")
-            return []
-        certification = next((cert for cert in self.certification_data.get("certifications", []) 
-                              if cert["certification"] == self.cert_name), None)
-        if certification:
-            categories = [cat["category"] for cat in certification.get("categories", [])]
-            if not categories:
-                # print(f"Warning: No categories found for certification {self.cert_name}")
-                return [f"Uncategorized: No categories found for certification {self.cert_name}"]
-            return categories
-        print(f"Error: Certification {self.cert_name} not found in the JSON data.")
-        return [f"Uncategorized - Error: Certification {self.cert_name} not found in the JSON data."]
+        """
+        Improved certification categories retrieval with error handling
+        """
+        try:
+            if not self.certification_data:
+                print("Warning: Certification data not loaded.")
+                return ["General Questions"]
+
+            certification = next(
+                (cert for cert in self.certification_data.get("certifications", [])
+                 if cert["certification"] == self.cert_name),
+                None
+            )
+
+            if certification:
+                categories = [cat["category"].strip() for cat in certification.get("categories", [])
+                             if "category" in cat and cat["category"].strip()]
+                return categories if categories else ["General Questions"]
+        
+            print(f"Warning: Certification {self.cert_name} not found in the JSON data.")
+            return ["General Questions"]
+    
+        except Exception as e:
+            print(f"Error in get_certification_categories: {e}")
+            return ["General Questions"]
 
     def analyze_nlp_for_category(self, category_name):
         certification = next((cert for cert in self.certification_data["certifications"] 
@@ -395,7 +424,7 @@ class ExamSimulatorGUI(QMainWindow):
                 self.certification_data = json.load(f)
         except Exception as e:
             print(f"Error loading certification data: {e}")
-            self.certification_data = None
+            self.certification_data = {}
 
     def select_language(self, lang_code):
         self.langs.set_language(lang_code)
@@ -475,34 +504,18 @@ class ExamSimulatorGUI(QMainWindow):
 
         question = self.questions[self.current_question]
         selected_answer = chr(65 + self.answer_group.checkedId())  # Convert to A, B, C, D
-
-        # Determine the question's category
-        category = self.categorize_question(question.question)
-        
-        # Ensure category exists in scores
-        if category not in self.category_scores:
-            self.category_scores[category] = {
-                'correct': 0,
-                'total': 0,
-                'questions': []
-            }
-
-        # Update category scores
-        self.category_scores[category]['total'] += 1
-        if selected_answer == question.correct_answer:
+    
+        # Store the user's answer in the question object
+        question.user_answer = selected_answer
+    
+        is_correct = selected_answer == question.correct_answer
+        if is_correct:
             self.score += 1
-            self.category_scores[category]['correct'] += 1
-            result_text = f"Correct!"
+            result_text = "Correct!"
             color = "green"
         else:
             result_text = f"Incorrect. The correct answer was {question.correct_answer}."
             color = "red"
-
-        # Store question details
-        self.category_scores[category]['questions'].append({
-            'question': question.question,
-            'correct': selected_answer == question.correct_answer
-        })
 
         self.explanation_label.setText(
             f"<p style='color: {color}'>{result_text}</p>"
@@ -510,7 +523,6 @@ class ExamSimulatorGUI(QMainWindow):
         )
         self.explanation_label.show()
         self.submit_btn.setEnabled(False)
-        self.quit_btn.setEnabled(True)
 
         # Wait 60 seconds before moving to next question - if user hasn't clicked "next >>" btn
         # QTimer.singleShot(60000, self.next_question)
@@ -540,162 +552,194 @@ class ExamSimulatorGUI(QMainWindow):
                 if item.widget():
                     item.widget().deleteLater()
 
+
+    def get_certification_scores(self, cert_name):
+        # Extract relevant categories and their scores based on the certification
+        cert_data = self.certification_data.get(cert_name, {})
+        cert_categories = cert_data.get("categories", [])
+    
+        # Create a dictionary to hold correct/incorrect answers per category
+        cert_scores = {}
+        for category in cert_categories:
+            category_name = category.get("name", "Unknown Category")
+            correct = category.get("correct", 0)
+            incorrect = category.get("incorrect", 0)
+            cert_scores[category_name] = {"correct": correct, "incorrect": incorrect}
+    
+        return cert_scores
+
+    
     def show_results(self):
         # Calculate overall score
-        percentage = (self.score / len(self.questions)) * 1000 # Microsoft/OnVue scoring system
+        percentage = (self.score / len(self.questions)) * 1000
         passed = percentage >= 700
-    
-        # Update title and overall score
+
+        # Update title and score
         self.results_title.setText("Exam Results")
         self.score_label.setText(
             f"Final Score: {self.score}/{len(self.questions)} ({percentage:.2f}/1000)\n"
-            f"{'PASS' if percentage >= 700 else 'FAIL'}"
+            f"{'PASS' if passed else 'FAIL'}"
         )
 
-        # Create and display the stacked chart
-        self.create_category_chart(self.category_scores)
-
-        # Clear previous chart if exists
-        for i in reversed(range(self.chart_layout.count())): 
-            self.chart_layout.itemAt(i).widget().setParent(None)
-
-        # Create category breakdown
-        category_scores = {}
-        category_totals = {}
-        category_details = {}
-
-        for question in self.questions:
-            category = question.category
-            if category not in category_scores:
-                category_scores[category] = {'correct': 0, 'incorrect': 0}
-                category_totals[category] = 0
-                category_details[category] = []
-
-            category_totals[category] += 1
-            if hasattr(question, 'user_answer'):
-                if question.user_answer == question.correct_answer:
-                    category_scores[category]['correct'] += 1
-                else:
-                    category_scores[category]['incorrect'] += 1
-
-        # Create chart
-        chart = QChart()
-        chart.setAnimationOptions(QChart.AnimationOption.SeriesAnimations)
-        chart.setTitle("Performance by Category")
-
-        # Create bar sets
-        correct_set = QBarSet("Correct")
-        incorrect_set = QBarSet("Incorrect")
+        # Initialize category tracking with proper error handling
+        categories_data = {}
     
-        # Set colors
-        correct_set.setColor(QColor("#2ecc71"))  # Green
-        incorrect_set.setColor(QColor("#e74c3c"))  # Red
+        # Process questions and track results by category
+        for question in self.questions[:self.current_question + 1]:
+            try:
+                category = self.categorize_question(question.question)
+                category = category.strip()  # Remove any leading/trailing whitespace
+            
+                # Initialize category if it doesn't exist
+                if category not in categories_data:
+                    categories_data[category] = {
+                        'correct': 0,
+                        'incorrect': 0,
+                        'total': 0,
+                        'questions': []
+                    }
+            
+                categories_data[category]['total'] += 1
+            
+                # Track question result if user answered
+                if hasattr(question, 'user_answer'):
+                    is_correct = question.user_answer == question.correct_answer
+                    if is_correct:
+                        categories_data[category]['correct'] += 1
+                    else:
+                        categories_data[category]['incorrect'] += 1
+                
+                    # Store question details
+                    categories_data[category]['questions'].append({
+                        'question': question.question,
+                        'correct': is_correct,
+                        'user_answer': question.user_answer,
+                        'correct_answer': question.correct_answer
+                    })
+            except Exception as e:
+                print(f"Error processing question category: {e}")
+                # Use a fallback category if categorization fails
+                fallback_category = "General Questions"
+                if fallback_category not in categories_data:
+                    categories_data[fallback_category] = {
+                        'correct': 0,
+                        'incorrect': 0,
+                        'total': 0,
+                        'questions': []
+                    }
+                categories_data[fallback_category]['total'] += 1
 
-        categories = []
-        for category in category_scores:
-            categories.append(category)
-            correct_set.append(category_scores[category]['correct'])
-            incorrect_set.append(category_scores[category]['incorrect'])
+        # Clear previous chart
+        self.clear_chart_layout()
 
-        # Create series
-        series = QStackedBarSeries()
-        series.append(correct_set)
-        series.append(incorrect_set)
-        chart.addSeries(series)
+        # Create and display category chart
+        self.create_category_chart(self.category_scores, categories_data)
 
-        # Create axes
-        axis_x = QBarCategoryAxis()
-        axis_x.append(categories)
-        chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
-        series.attachAxis(axis_x)
-
-        axis_y = QValueAxis()
-        axis_y.setRange(0, max([sum(cat.values()) for cat in category_scores.values()]))
-        chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
-        series.attachAxis(axis_y)
-
-        # Create chart view
-        chart_view = QChartView(chart)
-        chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        chart_view.setMinimumHeight(400)
-        self.chart_layout.addWidget(chart_view)
-
-        # Generate detailed text breakdown
+        # Generate detailed breakdown text
         details_text = "<h3>Detailed Category Breakdown:</h3>"
-        for category in category_scores:
-            correct = category_scores[category]['correct']
-            total = category_totals[category]
-            cat_percentage = (correct / total) * 100 if total > 0 else 0
-            details_text += f"<p><b>{category}</b>: {correct}/{total} ({cat_percentage:.1f}%)</p>"
+        for category, data in categories_data.items():
+            total = data['total']
+            correct = data.get('correct', 0)  # Use get() with default value
+            if total > 0:
+                percentage = (correct / total) * 100
+                details_text += f"<p><b>{category}</b>: {correct}/{total} ({percentage:.1f}%)</p>"
+                # Add question details if available
+                if 'questions' in data:
+                    for q in data['questions']:
+                        status = "✓" if q['correct'] else "✗"
+                        details_text += f"<p style='margin-left: 20px;'>{status} {q['question']}</p>"
 
         self.category_details.setText(details_text)
-    
+
         # Switch to results screen
         self.stacked_widget.setCurrentIndex(3)
 
-        """Create and display the category performance chart"""
-    def create_category_chart(self, category_scores):
-        # Safety check for empty category scores
-        if not category_scores:
-            print("Warning: No category scores available")
+    """Create and display the category performance chart"""
+    def create_category_chart(self, category_scores, categories_data):
+        # Safety check for empty data
+        if not categories_data:
+            print("Warning: No category data available")
             return
-
-         # Remove existing chart if any
-        if hasattr(self, 'chart_view') and self.chart_view is not None:
-            self.chart_view.deleteLater()
 
         # Create chart
         chart = QChart()
         chart.setAnimationOptions(QChart.AnimationOption.SeriesAnimations)
         chart.setTitle("Category Performance Breakdown")
 
-        # Create series & sets
-        series = QStackedBarSeries()
-
-        # Process category scores
-        categories = []
+        # Create bar sets
         correct_set = QBarSet("Correct")
         incorrect_set = QBarSet("Incorrect")
+        correct_set.setColor(QColor("#2ecc71"))  # Green
+        incorrect_set.setColor(QColor("#e74c3c"))  # Red
 
-        for category, stats in category_scores.items():
-            if stats['total'] > 0: # Only include categories with questions
-                categories.append(category)
-                correct_set.append(stats['correct'])
-                incorrect_set.append(stats['total'] - stats['correct'])
+        # Get categories from scoring.json for the current certification
+        cert_categories = []
+        try:
+            for cert in self.certification_data.get("certifications", []):
+                if cert["certification"] == self.cert_name:
+                    cert_categories = [cat["category"] for cat in cert.get("categories", [])]
+                    break
+        except Exception as e:
+            print(f"Error retrieving categories from scoring.json: {e}")
+            cert_categories = list(categories_data.keys())  # Fallback to existing categories
 
-        # Exception handling for empty categories
-        if not categories:
-            print(f"{renderer.WARNING}[WARNING] No valid categories with questions found{renderer.ENDC}")
-            return
+        # If no categories found in scoring.json, use existing categories
+        if not cert_categories:
+            cert_categories = list(categories_data.keys())
 
+        # Initialize data for all categories
+        category_results = {cat: {'correct': 0, 'incorrect': 0} for cat in cert_categories}
+
+        # Process questions and assign to proper categories
+        for category in cert_categories:
+            if category in categories_data:
+                category_results[category]['correct'] = categories_data[category]['correct']
+                category_results[category]['incorrect'] = (
+                    categories_data[category]['total'] - categories_data[category]['correct']
+                )
+
+        # Add data to bar sets in the order of cert_categories
+        for category in cert_categories:
+            correct_set.append(float(category_results[category]['correct']))
+            incorrect_set.append(float(category_results[category]['incorrect']))
+
+        # Create stacked bar series
+        series = QStackedBarSeries()
         series.append(correct_set)
         series.append(incorrect_set)
         chart.addSeries(series)
 
         # Setup axes
         axis_x = QBarCategoryAxis()
-        axis_x.append(categories)
+        axis_x.append(cert_categories)
         chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
         series.attachAxis(axis_x)
+        axis_x.setLabelsAngle(-45)  # Angle the labels for better readability
 
+        # Setup y-axis with proper range
+        max_total = max([
+            category_results[cat]['correct'] + category_results[cat]['incorrect']
+            for cat in cert_categories
+        ])
         axis_y = QValueAxis()
-        max_questions = max([stats['total'] for stats in category_scores.values()])
-        axis_y.setRange(0, max_questions)
+        axis_y.setRange(0, max_total + 1)
         axis_y.setTitleText("Number of Questions")
+        axis_y.setLabelFormat("%d")  # Use integer format
         chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
         series.attachAxis(axis_y)
 
         # Customize appearance
-        chart.setTheme(QChart.ChartTheme.ChartThemeLight)
+        chart.setTheme(QChart.ChartTheme.ChartThemeDark)
         chart.legend().setVisible(True)
         chart.legend().setAlignment(Qt.AlignmentFlag.AlignBottom)
 
-        # Create chart view
+        # Create and setup chart view with fixed size
         self.chart_view = QChartView(chart)
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.chart_view.setMinimumHeight(400)
+        self.chart_view.setMinimumWidth(600)
 
-        # Add to the layout
+        # Add to layout
         self.chart_layout.addWidget(self.chart_view)
 
     def get_category_details(self, category_scores):
