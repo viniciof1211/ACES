@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
 from PyQt6.QtCharts import QChart, QChartView, QBarSet, QStackedBarSeries, QBarCategoryAxis, QValueAxis
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPainter, QFont
+from PyQt6.QtGui import QAction, QPainter, QFont
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QPalette, QColor, QIcon
 
@@ -101,27 +101,45 @@ class Question:
 
 class ExamSimulatorGUI(QMainWindow):
     def __init__(self):
+        # Debug message for init start
+        print("[DEBUG] Initializing ExamSimulatorGUI...", file=sys.stderr)
         super().__init__()
-        # Initialize spaCy model
+        # Debug message before loading spaCy model
+        print("Loading spaCy model 'en_core_web_sm'...", file=sys.stderr)
         self.nlp = spacy.load("en_core_web_sm")
-        # Initialize attributes before creating UI
+        print("[DEBUG] spaCy model loaded successfully.", file=sys.stderr)
+        # Debug message for initializing attributes
+        print("[DEBUG] Initializing attributes...", file=sys.stderr)
         self.langs = Languages()
         self.questions = []
         self.current_question = 0
         self.score = 0
+        # Debug message for initializing category_scores and certification_data
+        print("[DEBUG] Initializing category_scores and certification_data...", file=sys.stderr)
         # Initialize category_scores as a dictionary with proper structure
         self.category_scores = {}
         self.certification_data = {}
+        # Debug message before loading certification data
+        print("[DEBUG] Loading certification data...", file=sys.stderr)
         self.load_certification_data()
+        print("[DEBUG] Certification data loaded successfully.", file=sys.stderr)
         # Initialize components
+        print("[DEBUG] Initializing UI components...", file=sys.stderr)
         self.results_title = QLabel()
         self.score_label = QLabel()
         self.certification_title = QLabel()
         self.chart_view = None
         self.cert_name = ""
         # Create UI elements
+        # Debug message before creating the UI
+        print("[DEBUG] Initializing UI elements...", file=sys.stderr)
         self.exam_in_progress = False
         self.init_ui()
+        print("UI initialization complete.", file=sys.stderr)
+
+        # Debug message for init end
+        print(f"{renderer.OKGREEN}ExamSimulatorGUI initialization complete.{renderer.ENDC}", file=sys.stderr)
+
 
     def init_results_ui(self, layout):
         # Configure title and score labels
@@ -146,16 +164,22 @@ class ExamSimulatorGUI(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         self.main_layout = QVBoxLayout(central_widget)
+        print("[DEBUG] Central widget object created")
 
         # Create stacked widget for different screens
         self.stacked_widget = QStackedWidget()
         self.main_layout.addWidget(self.stacked_widget)
+        print("[DEBUG] Central widget object created")
 
         # Create different screens
         self.create_language_screen()
+        print("[DEBUG] Central Language Screen created")
         self.create_certification_screen()
+        print("[DEBUG] Certifications Menu Screen created")
         self.create_exam_screen()
+        print("[DEBUG] Exam Screen created")
         self.create_results_screen()
+        print("[DEBUG] Results Screen created")
 
     def create_language_screen(self):
         language_widget = QWidget()
@@ -370,11 +394,15 @@ class ExamSimulatorGUI(QMainWindow):
         self.results_widget = QWidget()
         layout = QVBoxLayout(self.results_widget)
 
+        print("[DEBUG] Results Box Layout created")
+
         # Scrollable area for results
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll_content = QWidget()
         scroll_layout = QVBoxLayout(scroll_content)
+
+        print("[DEBUG] Results Scroll Area & Content Widget created")
 
         # Initialize results UI with the correct layout
         self.init_results_ui(scroll_layout)
@@ -385,20 +413,28 @@ class ExamSimulatorGUI(QMainWindow):
         self.results_title.setFont(QFont('Arial', 16, QFont.Weight.Bold))
         scroll_layout.addWidget(self.results_title)
 
+        print("[DEBUG] Results Title created")
+
         # Score label
         self.score_label = QLabel()
         self.score_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         scroll_layout.addWidget(self.score_label)
+
+        print("[DEBUG] Score label created")
 
         # Chart container
         self.chart_container = QWidget()
         self.chart_layout = QVBoxLayout(self.chart_container)
         scroll_layout.addWidget(self.chart_container)
 
+        print("[DEBUG] Chart container created")
+
         # Category details
         self.category_details = QLabel()
         self.category_details.setWordWrap(True)
         scroll_layout.addWidget(self.category_details)
+
+        print("[DEBUG] Category Details created")
 
         scroll.setWidget(scroll_content)
         layout.addWidget(scroll)
@@ -415,6 +451,8 @@ class ExamSimulatorGUI(QMainWindow):
         btn_layout.addWidget(new_exam_btn)
         btn_layout.addWidget(quit_btn)
         layout.addLayout(btn_layout)
+
+        print("[DEBUG] Buttons control panel created")
 
         self.stacked_widget.addWidget(self.results_widget)
 
@@ -796,8 +834,6 @@ if __name__ == '__main__':
         Provides immediate feedback and encourages continued learning
 
     """
-
-
 
     app = QApplication(sys.argv)
     
