@@ -753,6 +753,7 @@ class ExamSimulatorGUI(QMainWindow):
         chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
         series.attachAxis(axis_x)
         axis_x.setLabelsAngle(-45)  # Angle the labels for better readability
+        axis_x.setTruncateLabels(False)
 
         # Setup y-axis with proper range
         max_total = max([
@@ -808,9 +809,15 @@ class ExamSimulatorGUI(QMainWindow):
             # Mark remaining questions as incorrect or unanswered
             for i in range(self.current_question, len(self.questions)):
                 self.questions[i].user_answer = None
+                print(f"{renderer.FAIL} Question not answered: [{i}]{self.questions[i]} {renderer.ENDC}")
+            print(f"{renderer.WARNING}[ABORT] Loading partial results breakdown widget ... {renderer.ENDC}")
             self.show_results()
+
+            # quit_btn = QPushButton("Terminate exam")
+            # quit_btn.clicked.connect(self.confirm_abort)
+            # self.chart_layout.addWidget();
             # Show results for 30 seconds, then quit app
-            QTimer.singleShot(30000, sys.exit(0))
+            # QTimer.singleShot(30000, sys.exit(0))
 
 #############################################################################
 ############## MAIN ENTRY POINT #############################################
