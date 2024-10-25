@@ -446,7 +446,7 @@ class ExamSimulatorGUI(QMainWindow):
         new_exam_btn = QPushButton("New Exam")
         new_exam_btn.clicked.connect(self.select_new_exam)
         quit_btn = QPushButton("Terminate exam")
-        quit_btn.clicked.connect(sys.exit(0))
+        quit_btn.clicked.connect(self.confirm_abort)
         btn_layout.addWidget(retry_btn)
         btn_layout.addWidget(new_exam_btn)
         btn_layout.addWidget(quit_btn)
