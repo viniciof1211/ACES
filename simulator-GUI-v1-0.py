@@ -775,8 +775,8 @@ class ExamSimulatorGUI(QMainWindow):
         # Create and setup chart view with fixed size
         self.chart_view = QChartView(chart)
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self.chart_view.setMinimumHeight(400)
-        self.chart_view.setMinimumWidth(600)
+        self.chart_view.setMinimumHeight(1024)
+        self.chart_view.setMinimumWidth(748)
 
         # Add to layout
         self.chart_layout.addWidget(self.chart_view)
