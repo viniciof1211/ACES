@@ -446,7 +446,7 @@ class ExamSimulatorGUI(QMainWindow):
         new_exam_btn = QPushButton("New Exam")
         new_exam_btn.clicked.connect(self.select_new_exam)
         quit_btn = QPushButton("Terminate exam")
-        quit_btn.clicked.connect(self.confirm_abort)
+        quit_btn.clicked.connect(sys.exit(0))
         btn_layout.addWidget(retry_btn)
         btn_layout.addWidget(new_exam_btn)
         btn_layout.addWidget(quit_btn)
@@ -817,7 +817,7 @@ class ExamSimulatorGUI(QMainWindow):
             # quit_btn.clicked.connect(self.confirm_abort)
             # self.chart_layout.addWidget();
             # Show results for 30 seconds, then quit app
-            # QTimer.singleShot(30000, sys.exit(0))
+            QTimer.singleShot(30000, sys.exit(0))
 
 #############################################################################
 ############## MAIN ENTRY POINT #############################################
