@@ -390,6 +390,10 @@ class ExamSimulatorGUI(QMainWindow):
 
         self.stacked_widget.addWidget(exam_widget)
 
+    def abort_simulator(self):
+        self.abort_count(30)
+        sys.exit(0)
+
     def create_results_screen(self):
         self.results_widget = QWidget()
         layout = QVBoxLayout(self.results_widget)
@@ -446,7 +450,7 @@ class ExamSimulatorGUI(QMainWindow):
         new_exam_btn = QPushButton("New Exam")
         new_exam_btn.clicked.connect(self.select_new_exam)
         quit_btn = QPushButton("Terminate exam")
-        quit_btn.clicked.connect(sys.exit(0))
+        quit_btn.clicked.connect(self.abort_simulator)
         btn_layout.addWidget(retry_btn)
         btn_layout.addWidget(new_exam_btn)
         btn_layout.addWidget(quit_btn)
@@ -795,6 +799,12 @@ class ExamSimulatorGUI(QMainWindow):
             details.append("")
         return "\n".join(details)
 
+    def abort_count(self, seconds):
+        i = seconds*1000
+        while i >= 0:
+            print(f"{renderer.FAIL}[WARNING] Abortion in 0.{i} miliseconds ...{renderer.ENDC}")
+            i -= 1
+
     """Show confirmation dialog before aborting the exam"""
     def confirm_abort(self):
         reply = QMessageBox.question(
@@ -817,7 +827,7 @@ class ExamSimulatorGUI(QMainWindow):
             # quit_btn.clicked.connect(self.confirm_abort)
             # self.chart_layout.addWidget();
             # Show results for 30 seconds, then quit app
-            QTimer.singleShot(30000, sys.exit(0))
+            # QTimer.singleShot(30000, self.abort_count(30))
 
 #############################################################################
 ############## MAIN ENTRY POINT #############################################
