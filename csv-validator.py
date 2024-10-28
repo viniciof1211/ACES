@@ -4,7 +4,7 @@ import csv
 global file_path
 
  # File path for the uploaded CSV
-file_path = 'pl900_questions.csv'
+file_path = 'az-305_questions.csv'
 
 def validate():
     # Schema definition
@@ -23,16 +23,20 @@ def validate():
         if header != expected_header:
             errors.append("Header does not match the expected schema.")
     
+        err_str = " "
         # Check each row for the correct number of fields
         for i, row in enumerate(reader, start=2):  # Start at 2 to account for the header row
             if len(row) != expected_field_count:
-                errors.append(f"Row {i} does not have {expected_field_count} fields: {row}")
+                err_str = f"Row {i} does not have {expected_field_count} fields: {row}\n"
+                errors.append(err_str)
+                print(err_str)
 
-    if errors.__len__:
-        # Output the result
-        for error in errors:
-            print(f"\n{error}")
-            return
+    if errors:
+        return
+    # Output the result
+    #for error in errors:
+    #        print(f"\n{error}")
+    #        return
     print("CSV is valid according to the schema.")
 
 def main():
