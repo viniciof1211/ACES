@@ -4,7 +4,7 @@ import csv
 global file_path
 
  # File path for the uploaded CSV
-file_path = 'az-305_questions.csv'
+file_path = 'sc-900_questions.csv'
 
 def validate():
     # Schema definition
