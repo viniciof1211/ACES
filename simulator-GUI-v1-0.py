@@ -99,6 +99,141 @@ class Question:
         self.explanation = explanation
         self.category = None
 
+import json
+import os
+from datetime import datetime, timedelta
+from PyQt6.QtWidgets import QWidget, QLabel
+from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QPointF, QRectF
+from PyQt6.QtGui import QPainter, QColor, QPainterPath, QLinearGradient
+
+class StreakFlame(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(32, 40)
+        self.streak_count = 0
+        self.flame_height = 0.0
+        self.flame_opacity = 0.8
+        self.load_streak_data()
+        
+        # Animation setup
+        self.animation = QPropertyAnimation(self, b"flame_height")
+        self.animation.setDuration(1000)
+        self.animation.setStartValue(0.0)
+        self.animation.setEndValue(1.0)
+        self.animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        self.animation.setLoopCount(-1)
+        self.animation.start()
+        
+        # Timer for updating streak status
+        self.check_timer = QTimer(self)
+        self.check_timer.timeout.connect(self.check_streak)
+        self.check_timer.start(3600000)  # Check every hour
+        
+        self.streak_label = QLabel(str(self.streak_count), self)
+        self.streak_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.streak_label.setStyleSheet("color: white; font-weight: bold;")
+        self.streak_label.move(8, 12)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Create flame path
+        path = QPainterPath()
+        width = self.width()
+        height = self.height()
+        
+        # Animate flame
+        flame_mod = abs(self.flame_height - 0.5) * 4
+        
+        # Base points
+        path.moveTo(width/2, height)
+        path.cubicTo(
+            width * 0.2, height * 0.8,
+            width * (0.3 + flame_mod * 0.1), height * 0.5,
+            width/2, height * (0.3 + flame_mod * 0.1)
+        )
+        path.cubicTo(
+            width * (0.7 - flame_mod * 0.1), height * 0.5,
+            width * 0.8, height * 0.8,
+            width/2, height
+        )
+
+        # Create gradient
+        gradient = QLinearGradient(QPointF(width/2, 0), QPointF(width/2, height))
+        gradient.setColorAt(0.0, QColor(255, 140, 0, int(255 * self.flame_opacity)))
+        gradient.setColorAt(0.5, QColor(255, 69, 0, int(255 * self.flame_opacity)))
+        gradient.setColorAt(1.0, QColor(255, 0, 0, int(255 * self.flame_opacity)))
+
+        # Draw flame
+        painter.fillPath(path, gradient)
+
+    def load_streak_data(self):
+        try:
+            if os.path.exists('streak_data.json'):
+                with open('streak_data.json', 'r') as f:
+                    data = json.load(f)
+                    self.streak_count = data.get('streak', 0)
+                    last_practice = datetime.fromisoformat(data.get('last_practice'))
+                    
+                    # Check if streak is still valid
+                    today = datetime.now().date()
+                    if (today - last_practice.date()).days > 1:
+                        self.streak_count = 0
+            else:
+                self.streak_count = 0
+        except Exception as e:
+            print(f"Error loading streak data: {e}")
+            self.streak_count = 0
+
+    def save_streak_data(self):
+        data = {
+            'streak': self.streak_count,
+            'last_practice': datetime.now().isoformat()
+        }
+        try:
+            with open('streak_data.json', 'w') as f:
+                json.dump(data, f)
+        except Exception as e:
+            print(f"Error saving streak data: {e}")
+
+    def check_streak(self):
+        today = datetime.now().date()
+        try:
+            with open('streak_data.json', 'r') as f:
+                data = json.load(f)
+                last_practice = datetime.fromisoformat(data.get('last_practice')).date()
+                
+                if (today - last_practice).days > 1:
+                    self.streak_count = 0
+                    self.save_streak_data()
+                    self.streak_label.setText(str(self.streak_count))
+        except Exception:
+            pass
+
+    def update_streak(self):
+        today = datetime.now().date()
+        try:
+            if os.path.exists('streak_data.json'):
+                with open('streak_data.json', 'r') as f:
+                    data = json.load(f)
+                    last_practice = datetime.fromisoformat(data.get('last_practice')).date()
+                    
+                    if last_practice < today:
+                        if (today - last_practice).days == 1:
+                            self.streak_count += 1
+                        else:
+                            self.streak_count = 1
+                        self.save_streak_data()
+            else:
+                self.streak_count = 1
+                self.save_streak_data()
+                
+            self.streak_label.setText(str(self.streak_count))
+        except Exception as e:
+            print(f"Error updating streak: {e}")
+
+
 class ExamSimulatorGUI(QMainWindow):
     def __init__(self):
         # Debug message for init start
@@ -130,6 +265,7 @@ class ExamSimulatorGUI(QMainWindow):
         self.certification_title = QLabel()
         self.chart_view = None
         self.cert_name = ""
+        self.streak_flame = None  # Will be initialized when creating exam screen
         # Create UI elements
         # Debug message before creating the UI
         print("[DEBUG] Initializing UI elements...", file=sys.stderr)
@@ -347,9 +483,11 @@ class ExamSimulatorGUI(QMainWindow):
         self.progress_layout = QHBoxLayout()
         self.question_number_label = QLabel()
         self.progress_bar = QProgressBar()
+        self.streak_flame = StreakFlame()
         self.progress_layout.addWidget(self.certification_title)
         self.progress_layout.addWidget(self.question_number_label)
         self.progress_layout.addWidget(self.progress_bar)
+        self.progress_layout.addWidget(self.streak_flame)
         layout.addLayout(self.progress_layout)
 
         # Question text
@@ -476,6 +614,10 @@ class ExamSimulatorGUI(QMainWindow):
     def start_exam(self):
         self.cert_name = self.cert_combo.currentText()
         csv_file = f"{self.cert_name.split(':')[0].lower()}_questions.csv"
+
+        # Update streak when starting a new exam
+        if self.streak_flame:
+            self.streak_flame.update_streak()
 
         try:
             self.load_questions(csv_file)
@@ -612,6 +754,9 @@ class ExamSimulatorGUI(QMainWindow):
 
     
     def show_results(self):
+        # Update streak when completing an exam
+        if self.streak_flame:
+            self.streak_flame.update_streak()
         # Calculate overall score
         percentage = (self.score / len(self.questions)) * 1000
         passed = percentage >= 700

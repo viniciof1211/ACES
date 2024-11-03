@@ -25,6 +25,7 @@
     <Compile Include="csv-validator.py" />
     <Compile Include="csv-scanner-v0.1.py" />
     <Compile Include="generate_logo.py" />
+    <Compile Include="gen_raw_streak_json.py" />
     <Compile Include="json-validator.py" />
     <Compile Include="main-azure-certs-exam-simulator.py" />
     <Compile Include="simulator-GUI-v1-0.py" />
